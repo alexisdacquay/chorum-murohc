@@ -1,4 +1,6 @@
-# Chorum-murohc — Scope v1
+# Chorum — Project Plan
+
+> **Status:** Planning
 
 ## Overview
 
