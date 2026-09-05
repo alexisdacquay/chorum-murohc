@@ -7,7 +7,6 @@ from django.apps import apps
 from django.conf import settings
 from django.test import SimpleTestCase
 
-
 PRODUCT_PACKAGE = Path(__file__).resolve().parent
 ROOT_PACKAGE = 'chorum_murohc'
 ROOT_PACKAGE_MODULES = frozenset(
@@ -94,15 +93,13 @@ def _imported_boundaries(path):
             modules.extend(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom):
             if node.level:
-                relative_name = f"{'.' * node.level}{node.module or ''}"
+                relative_name = f'{"." * node.level}{node.module or ""}'
                 module = resolve_name(relative_name, source_package)
             else:
                 module = node.module or ''
             if module == ROOT_PACKAGE:
                 modules.extend(
-                    module
-                    if alias.name == '*'
-                    else f'{module}.{alias.name}'
+                    module if alias.name == '*' else f'{module}.{alias.name}'
                     for alias in node.names
                 )
             else:

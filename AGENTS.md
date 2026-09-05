@@ -3,6 +3,8 @@ Commands
 - `uv sync --locked` - install exactly the locked dependencies
 - `uv run --locked pytest` - run the whole suite
 - `uv run --locked pytest chorum_murohc/tests.py` - the baseline test file after T001
+- `uv run --locked ruff format --check .` - verify Python formatting
+- `uv run --locked ruff check .` - verify Python linting
 
 Documents
 
