@@ -12,7 +12,7 @@ wheels = [
 ]
 
 [[package]]
-name = "chorum"
+name = "chorum-murohc"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

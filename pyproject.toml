@@ -1,5 +1,5 @@
 [project]
-name = "chorum"
+name = "chorum-murohc"
 version = "0.1.0"
 description = "A gamified household chore-management application."
 requires-python = ">=3.13"

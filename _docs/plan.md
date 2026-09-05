@@ -1,4 +1,4 @@
-# Chorum — Project Plan
+# Chorum-murohc — Project Plan
 
 > **Status:** Planning
 

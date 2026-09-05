@@ -1,6 +1,6 @@
-# Chorum
+# Chorum-murohc
 
-Chorum is a planned household chore-management web app that turns everyday
+Chorum-murohc is a planned household chore-management web app that turns everyday
 tasks into a rewarding experience for individuals, couples, and families.
 
 Children complete chores to earn points, parents approve the work, and saved
@@ -8,7 +8,7 @@ points help creatures evolve over time. Points can also be exchanged for
 agreed household rewards.
 
 > **Project status:** Early development. The Django project and initial
-> `chores` app have been created; product features are not yet implemented.
+> `chorum-murohc` app have been created; product features are not yet implemented.
 
 ## Planned features
 
@@ -63,10 +63,13 @@ uv run python manage.py test
 
 ## Project structure
 
-- `chorum/` — project-wide configuration and URL routing
-- `chores/` — the household chores Django app
+- `config/` — project-wide Django settings and URL routing
+- `chorum_murohc/` — the main Chorum-murohc Django app
 - `_docs/plan.md` — current product plan and requirements
 - `manage.py` — command-line entry point for Django tasks
+
+The public project and app name uses a hyphen. Python package names cannot use
+hyphens, so the app's importable code folder uses `chorum_murohc` instead.
 
 ## Configuration and security
 
