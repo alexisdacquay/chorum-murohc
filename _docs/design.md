@@ -94,4 +94,4 @@ need: Go for concurrent network services or workers, and Rust for CPU-intensive
 or unusually safety-critical components.
 
 The suggested operational additions and production evolution are recorded
-separately from product features in the [long-term roadmap](../docs/roadmap-v1.md).
+separately from product features in the [long-term roadmap](roadmap.md).

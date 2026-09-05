@@ -1,4 +1,4 @@
-# Chorum-murohc — Roadmap v1
+# Chorum-murohc — Roadmap
 
 > **Status:** Long-term possibilities; not in the current implementation scope.
 

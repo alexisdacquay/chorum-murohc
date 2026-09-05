@@ -32,7 +32,7 @@ agreed household rewards.
 - [Project plan](_docs/plan.md) — current product scope and requirements
 - [Design](_docs/design.md) — selected architecture and implementation track
 - [Backlog](_docs/tasks.md) — self-contained implementation tasks
-- [Roadmap](docs/roadmap-v1.md) — ideas intentionally deferred beyond the current scope
+- [Roadmap](_docs/roadmap.md) — ideas intentionally deferred beyond the current scope
 
 ## Local development
 
