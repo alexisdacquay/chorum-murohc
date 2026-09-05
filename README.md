@@ -32,6 +32,10 @@ agreed household rewards.
 - [Project plan](_docs/plan.md) — current product scope and requirements
 - [Design](_docs/design.md) — selected architecture and implementation track
 - [Backlog](_docs/tasks.md) — self-contained implementation tasks
+- [Development process](_docs/process.md) — issue readiness, isolation, review, and handoff rules
+- [Delegation map](_docs/task-dependencies.md) — dependencies and safe parallel workstreams
+- [Dependency approvals](_docs/dependency-approvals.md) — package-change approval register
+- [Requirements evidence](_docs/requirements-evidence.md) — current-plan coverage and verification ledger
 - [Roadmap](_docs/roadmap.md) — ideas intentionally deferred beyond the current scope
 
 ## Local development
@@ -46,14 +50,14 @@ agreed household rewards.
 Install the locked dependencies and prepare the local database:
 
 ```shell
-uv sync
-uv run python manage.py migrate
+uv sync --locked
+uv run --locked python manage.py migrate
 ```
 
 Start the development server:
 
 ```shell
-uv run python manage.py runserver
+uv run --locked python manage.py runserver
 ```
 
 Then open <http://127.0.0.1:8000/>.
@@ -61,8 +65,8 @@ Then open <http://127.0.0.1:8000/>.
 ### Checks and tests
 
 ```shell
-uv run python manage.py check
-uv run python manage.py test
+uv run --locked python manage.py check
+uv run --locked python manage.py test
 ```
 
 ## Project structure
