@@ -66,6 +66,8 @@ Then open <http://127.0.0.1:8000/>.
 
 ```shell
 uv run --locked python manage.py check
+uv run --locked ruff format --check .
+uv run --locked ruff check .
 uv run --locked pytest
 ```
 
