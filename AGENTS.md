@@ -1,8 +1,7 @@
 Commands
 
 - `uv sync --locked` - install exactly the locked dependencies
-- `uv run --locked python manage.py test chorum_murohc` - bootstrap suite only until T001 is merged
-- `uv run --locked pytest` - the whole suite after T001
+- `uv run --locked pytest` - run the whole suite
 - `uv run --locked pytest chorum_murohc/tests.py` - the baseline test file after T001
 
 Documents

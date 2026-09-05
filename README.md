@@ -66,7 +66,7 @@ Then open <http://127.0.0.1:8000/>.
 
 ```shell
 uv run --locked python manage.py check
-uv run --locked python manage.py test
+uv run --locked pytest
 ```
 
 ## Project structure
