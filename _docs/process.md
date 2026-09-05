@@ -4,6 +4,10 @@ This process applies whenever work is performed by one developer, several
 developers, or delegated coding agents. Safety and a reproducible handoff take
 priority over maximising concurrency.
 
+## Roles
+
+- PM - grooms a task before anyone implements it, follows `_docs/team/pm.md`
+
 ## Unit of work
 
 - `main` is the integration branch. Each implementation task is one GitHub
