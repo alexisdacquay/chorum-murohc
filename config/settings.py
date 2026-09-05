@@ -13,24 +13,67 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+# Runtime configuration
 
-# The fallback is only for local development. Set DJANGO_SECRET_KEY before
-# deploying the application.
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-local-development-only',
-)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+def _invalid(variable):
+    raise ImproperlyConfigured(f'{variable} is invalid.')
 
-ALLOWED_HOSTS = []
+
+def _required(variable):
+    raise ImproperlyConfigured(f'{variable} is required.')
+
+
+environment_value = os.environ.get('DJANGO_ENVIRONMENT')
+if environment_value is None:
+    DJANGO_ENVIRONMENT = 'development'
+else:
+    DJANGO_ENVIRONMENT = environment_value.strip().casefold()
+    if DJANGO_ENVIRONMENT not in {'development', 'production'}:
+        _invalid('DJANGO_ENVIRONMENT')
+
+is_production = DJANGO_ENVIRONMENT == 'production'
+
+secret_key_value = os.environ.get('DJANGO_SECRET_KEY')
+if secret_key_value is None:
+    if is_production:
+        _required('DJANGO_SECRET_KEY')
+    SECRET_KEY = 'django-insecure-local-development-only'
+elif not secret_key_value.strip():
+    _invalid('DJANGO_SECRET_KEY')
+else:
+    SECRET_KEY = secret_key_value
+
+debug_value = os.environ.get('DJANGO_DEBUG')
+if debug_value is None:
+    DEBUG = not is_production
+else:
+    normalised_debug = debug_value.strip().casefold()
+    if normalised_debug in {'1', 'true', 'yes', 'on'}:
+        DEBUG = True
+    elif normalised_debug in {'0', 'false', 'no', 'off'}:
+        DEBUG = False
+    else:
+        _invalid('DJANGO_DEBUG')
+
+if is_production and DEBUG:
+    _invalid('DJANGO_DEBUG')
+
+allowed_hosts_value = os.environ.get('DJANGO_ALLOWED_HOSTS')
+if allowed_hosts_value is None:
+    if is_production:
+        _required('DJANGO_ALLOWED_HOSTS')
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'testserver']
+else:
+    ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_value.split(',')]
+    if not ALLOWED_HOSTS or any(not host or host == '*' for host in ALLOWED_HOSTS):
+        _invalid('DJANGO_ALLOWED_HOSTS')
 
 
 # Application definition
@@ -86,12 +129,84 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+database_engine_value = os.environ.get('DJANGO_DB_ENGINE')
+if database_engine_value is None:
+    if is_production:
+        _required('DJANGO_DB_ENGINE')
+    database_engine = 'sqlite'
+else:
+    database_engine = database_engine_value.strip().casefold()
+    if database_engine not in {'sqlite', 'postgresql'}:
+        _invalid('DJANGO_DB_ENGINE')
+
+if is_production and database_engine != 'postgresql':
+    _invalid('DJANGO_DB_ENGINE')
+
+if database_engine == 'sqlite':
+    for conflicting_variable in (
+        'DJANGO_DB_USER',
+        'DJANGO_DB_PASSWORD',
+        'DJANGO_DB_HOST',
+        'DJANGO_DB_PORT',
+    ):
+        if conflicting_variable in os.environ:
+            raise ImproperlyConfigured(
+                f'{conflicting_variable} conflicts with DJANGO_DB_ENGINE.'
+            )
+
+    database_name_value = os.environ.get('DJANGO_DB_NAME')
+    if database_name_value is None:
+        database_name = BASE_DIR / 'db.sqlite3'
+    elif not database_name_value.strip():
+        _invalid('DJANGO_DB_NAME')
+    elif database_name_value == ':memory:':
+        database_name = database_name_value
+    else:
+        database_name_path = Path(database_name_value)
+        database_name = (
+            database_name_path
+            if database_name_path.is_absolute()
+            else BASE_DIR / database_name_path
+        )
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': database_name,
+        }
     }
-}
+else:
+    database_variables = (
+        'DJANGO_DB_NAME',
+        'DJANGO_DB_USER',
+        'DJANGO_DB_PASSWORD',
+        'DJANGO_DB_HOST',
+        'DJANGO_DB_PORT',
+    )
+    database_values = {}
+    for database_variable in database_variables:
+        database_value = os.environ.get(database_variable)
+        if database_value is None or not database_value.strip():
+            _required(database_variable)
+        database_values[database_variable] = database_value
+
+    database_port_value = database_values['DJANGO_DB_PORT']
+    if not database_port_value.isascii() or not database_port_value.isdecimal():
+        _invalid('DJANGO_DB_PORT')
+    database_port = int(database_port_value, 10)
+    if not 1 <= database_port <= 65535:
+        _invalid('DJANGO_DB_PORT')
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': database_values['DJANGO_DB_NAME'],
+            'USER': database_values['DJANGO_DB_USER'],
+            'PASSWORD': database_values['DJANGO_DB_PASSWORD'],
+            'HOST': database_values['DJANGO_DB_HOST'],
+            'PORT': str(database_port),
+        }
+    }
 
 
 # Password validation
