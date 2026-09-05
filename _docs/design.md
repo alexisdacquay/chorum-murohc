@@ -54,22 +54,57 @@ SQLite may remain useful for very early local experiments, but PostgreSQL is
 the selected implementation database so that development and production
 behaviour do not diverge unnecessarily.
 
-## Modularity Direction
+## Approved Backend Boundaries
 
-The product remains Chorum-murohc. Within it, Django modules should own bounded
-areas of behaviour rather than allowing all models and rules to accumulate in
-one package. Candidate boundaries include:
+The repository and public product remain **Chorum-murohc**. The Python
+distribution remains `chorum-murohc`, and all importable product packages use
+the valid Python namespace `chorum_murohc`. The backend is not a standalone
+`chores` project, and the nested chores app does not replace the existing root
+app.
 
-- Identity and households
-- Chore definitions
-- Completion and approval workflows
-- Points ledger and interest
-- Rewards
-- Creatures and evolution
-- Administration and audit history
+`config` is the Django composition root. It owns settings, root URLs, ASGI, and
+WSGI only; it may register every app but owns no product models or migrations.
+The existing `chorum_murohc` app remains installed as the Chorum-murohc
+compatibility/root app and package namespace. It imports no domain
+implementation and owns no product models or product migrations.
 
-These are proposed design boundaries, not final package names. Boundaries and
-interfaces should be agreed before their implementation.
+The following packages are the approved backend boundaries. The tasks in the
+final column own future model and migration changes for that app; this boundary
+task creates only the eight nested app shells and their empty migrations
+packages.
+
+| Package / Django app | Responsibility | Future model and migration owner |
+| --- | --- | --- |
+| `config` | Django composition root: settings, root URLs, ASGI, and WSGI only | No product models or migrations |
+| `chorum_murohc` | Existing installed Chorum-murohc compatibility/root app and package namespace | No product models or product migrations |
+| `chorum_murohc.identity` | Users, households, memberships, and parent PIN persistence | T006, T007, and T030 |
+| `chorum_murohc.audit` | Append-only audit events | T008 |
+| `chorum_murohc.chores` | Reusable household chore definitions | T034 |
+| `chorum_murohc.submissions` | Completion submissions and approval state | T041 and later submission-schema changes |
+| `chorum_murohc.ledger` | Immutable point transactions | T038 and later ledger-schema changes |
+| `chorum_murohc.rewards` | Reward-redemption records | T056 and later reward-schema changes |
+| `chorum_murohc.progression` | Per-child level state | T062 and later progression-schema changes |
+| `chorum_murohc.creatures` | Creature catalogue, forms, and selection state | T069 and later creature-schema changes |
+
+Python dependencies between product apps must follow this acyclic direction
+map:
+
+| Importing package | Product packages it may import |
+| --- | --- |
+| `chorum_murohc` root | None |
+| `chorum_murohc.audit` | None |
+| `chorum_murohc.identity` | `audit` |
+| `chorum_murohc.chores` | `audit` |
+| `chorum_murohc.ledger` | `audit` |
+| `chorum_murohc.submissions` | `identity`, `chores`, `ledger`, `audit` |
+| `chorum_murohc.rewards` | `identity`, `ledger`, `audit` |
+| `chorum_murohc.progression` | `identity`, `ledger`, `audit` |
+| `chorum_murohc.creatures` | `identity`, `progression`, `audit` |
+
+Reverse or undeclared product-package imports are forbidden. Cross-app model
+references use Django lazy string references or `settings.AUTH_USER_MODEL`,
+with migration dependencies declared only when the owning model task adds a
+migration.
 
 The frontend should follow the same domain boundaries for screens, components,
 API clients, and tests. Shared UI primitives should remain separate from

@@ -43,6 +43,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'chorum_murohc.apps.ChorumMurohcConfig',
+    'chorum_murohc.identity.apps.IdentityConfig',
+    'chorum_murohc.audit.apps.AuditConfig',
+    'chorum_murohc.chores.apps.ChoresConfig',
+    'chorum_murohc.submissions.apps.SubmissionsConfig',
+    'chorum_murohc.ledger.apps.LedgerConfig',
+    'chorum_murohc.rewards.apps.RewardsConfig',
+    'chorum_murohc.progression.apps.ProgressionConfig',
+    'chorum_murohc.creatures.apps.CreaturesConfig',
 ]
 
 MIDDLEWARE = [
