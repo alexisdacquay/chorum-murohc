@@ -390,493 +390,157 @@ Implementation work follows two additional rules:
 
 **Description**: Using the approved catalogue and asset specification, add shared creature-line and form records with stable identifiers, form index, display metadata, asset reference, provenance reference, and active state. Test ordering, duplicate form indices, missing required metadata, activation, and the rule that catalogue records are not household-owned.
 
-## 63. Define the visual reference for creature line 1
+## 63. Produce images for creature lineage 1
 
-**Goal**: Establish one approved visual direction before producing line 1's numbered forms.
+**Goal**: Add the complete approved image evolution for creature lineage 1.
 
-**Description**: Using the approved line 1 entry and asset rules in `_docs/creature-catalogue-policy.md`, create a non-production reference sheet covering silhouette, palette, materials, scale, fixed characteristics, and the allowed change between adjacent forms. Record its source and provenance in the manifest, obtain the required visual approval, and produce no numbered production form assets in this task.
+**Description**: Using the approved lineage 1 entry and asset rules in `_docs/creature-catalogue-policy.md`, establish its visual reference and generate or import approximately 35 ordered form-index images with accessible descriptions and source, licence, or generation provenance recorded in the manifest. Verify format, dimensions, identifiers, catalogue references, and gradual visual continuity across the complete lineage; stop if lineage 1 is not approved.
 
-## 64. Produce creature line 1 form indices 1–5
+## 64. Produce images for creature lineage 2
 
-**Goal**: Add production form indices 1 through 5 for creature line 1.
+**Goal**: Add the complete approved image evolution for creature lineage 2.
 
-**Description**: Using the approved line 1 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 1–5 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
+**Description**: Using the approved lineage 2 entry and asset rules in `_docs/creature-catalogue-policy.md`, establish its visual reference and generate or import approximately 35 ordered form-index images with accessible descriptions and source, licence, or generation provenance recorded in the manifest. Verify format, dimensions, identifiers, catalogue references, and gradual visual continuity across the complete lineage; stop if lineage 2 is not approved.
 
-## 65. Produce creature line 1 form indices 6–10
+## 65. Produce images for creature lineage 3
 
-**Goal**: Add production form indices 6 through 10 for creature line 1.
+**Goal**: Add the complete approved image evolution for creature lineage 3.
 
-**Description**: Using the approved line 1 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 6–10 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
+**Description**: Using the approved lineage 3 entry and asset rules in `_docs/creature-catalogue-policy.md`, establish its visual reference and generate or import approximately 35 ordered form-index images with accessible descriptions and source, licence, or generation provenance recorded in the manifest. Verify format, dimensions, identifiers, catalogue references, and gradual visual continuity across the complete lineage; stop if lineage 3 is not approved.
 
-## 66. Produce creature line 1 form indices 11–15
+## 66. Produce images for creature lineage 4
 
-**Goal**: Add production form indices 11 through 15 for creature line 1.
+**Goal**: Add the complete approved image evolution for creature lineage 4.
 
-**Description**: Using the approved line 1 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 11–15 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
+**Description**: Using the approved lineage 4 entry and asset rules in `_docs/creature-catalogue-policy.md`, establish its visual reference and generate or import approximately 35 ordered form-index images with accessible descriptions and source, licence, or generation provenance recorded in the manifest. Verify format, dimensions, identifiers, catalogue references, and gradual visual continuity across the complete lineage; stop if lineage 4 is not approved.
 
-## 67. Produce creature line 1 form indices 16–20
+## 67. Produce images for creature lineage 5
 
-**Goal**: Add production form indices 16 through 20 for creature line 1.
+**Goal**: Add the complete approved image evolution for creature lineage 5.
 
-**Description**: Using the approved line 1 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 16–20 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
+**Description**: Using the approved lineage 5 entry and asset rules in `_docs/creature-catalogue-policy.md`, establish its visual reference and generate or import approximately 35 ordered form-index images with accessible descriptions and source, licence, or generation provenance recorded in the manifest. Verify format, dimensions, identifiers, catalogue references, and gradual visual continuity across the complete lineage; stop if lineage 5 is not approved.
 
-## 68. Produce creature line 1 form indices 21–25
+## 68. Produce images for creature lineage 6
 
-**Goal**: Add production form indices 21 through 25 for creature line 1.
+**Goal**: Add the complete approved image evolution for creature lineage 6.
 
-**Description**: Using the approved line 1 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 21–25 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
+**Description**: Using the approved lineage 6 entry and asset rules in `_docs/creature-catalogue-policy.md`, establish its visual reference and generate or import approximately 35 ordered form-index images with accessible descriptions and source, licence, or generation provenance recorded in the manifest. Verify format, dimensions, identifiers, catalogue references, and gradual visual continuity across the complete lineage; stop if lineage 6 is not approved.
 
-## 69. Produce creature line 1 form indices 26–30
+## 69. Produce images for creature lineage 7
 
-**Goal**: Add production form indices 26 through 30 for creature line 1.
+**Goal**: Add the complete approved image evolution for creature lineage 7.
 
-**Description**: Using the approved line 1 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 26–30 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
+**Description**: Using the approved lineage 7 entry and asset rules in `_docs/creature-catalogue-policy.md`, establish its visual reference and generate or import approximately 35 ordered form-index images with accessible descriptions and source, licence, or generation provenance recorded in the manifest. Verify format, dimensions, identifiers, catalogue references, and gradual visual continuity across the complete lineage; stop if lineage 7 is not approved.
 
-## 70. Produce creature line 1 form indices 31–35
-
-**Goal**: Add production form indices 31 through 35 for creature line 1.
-
-**Description**: Using the approved line 1 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 31–35 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 71. Review creature line 1 visual continuity
-
-**Goal**: Decide whether all 35 forms for creature line 1 read as one gradual evolution.
-
-**Description**: Review the complete line 1 sequence against its approved visual reference for identity, adjacent-form change, scale, colour, detail, accessibility text, and manifest provenance. Do not remake assets in this task; record each failed range as a separate bounded remediation task with the affected form indices and acceptance evidence.
-
-## 72. Define the visual reference for creature line 2
-
-**Goal**: Establish one approved visual direction before producing line 2's numbered forms.
-
-**Description**: Using the approved line 2 entry and asset rules in `_docs/creature-catalogue-policy.md`, create a non-production reference sheet covering silhouette, palette, materials, scale, fixed characteristics, and the allowed change between adjacent forms. Record its source and provenance in the manifest, obtain the required visual approval, and produce no numbered production form assets in this task.
-
-## 73. Produce creature line 2 form indices 1–5
-
-**Goal**: Add production form indices 1 through 5 for creature line 2.
-
-**Description**: Using the approved line 2 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 1–5 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 74. Produce creature line 2 form indices 6–10
-
-**Goal**: Add production form indices 6 through 10 for creature line 2.
-
-**Description**: Using the approved line 2 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 6–10 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 75. Produce creature line 2 form indices 11–15
-
-**Goal**: Add production form indices 11 through 15 for creature line 2.
-
-**Description**: Using the approved line 2 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 11–15 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 76. Produce creature line 2 form indices 16–20
-
-**Goal**: Add production form indices 16 through 20 for creature line 2.
-
-**Description**: Using the approved line 2 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 16–20 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 77. Produce creature line 2 form indices 21–25
-
-**Goal**: Add production form indices 21 through 25 for creature line 2.
-
-**Description**: Using the approved line 2 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 21–25 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 78. Produce creature line 2 form indices 26–30
-
-**Goal**: Add production form indices 26 through 30 for creature line 2.
-
-**Description**: Using the approved line 2 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 26–30 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 79. Produce creature line 2 form indices 31–35
-
-**Goal**: Add production form indices 31 through 35 for creature line 2.
-
-**Description**: Using the approved line 2 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 31–35 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 80. Review creature line 2 visual continuity
-
-**Goal**: Decide whether all 35 forms for creature line 2 read as one gradual evolution.
-
-**Description**: Review the complete line 2 sequence against its approved visual reference for identity, adjacent-form change, scale, colour, detail, accessibility text, and manifest provenance. Do not remake assets in this task; record each failed range as a separate bounded remediation task with the affected form indices and acceptance evidence.
-
-## 81. Define the visual reference for creature line 3
-
-**Goal**: Establish one approved visual direction before producing line 3's numbered forms.
-
-**Description**: Using the approved line 3 entry and asset rules in `_docs/creature-catalogue-policy.md`, create a non-production reference sheet covering silhouette, palette, materials, scale, fixed characteristics, and the allowed change between adjacent forms. Record its source and provenance in the manifest, obtain the required visual approval, and produce no numbered production form assets in this task.
-
-## 82. Produce creature line 3 form indices 1–5
-
-**Goal**: Add production form indices 1 through 5 for creature line 3.
-
-**Description**: Using the approved line 3 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 1–5 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 83. Produce creature line 3 form indices 6–10
-
-**Goal**: Add production form indices 6 through 10 for creature line 3.
-
-**Description**: Using the approved line 3 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 6–10 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 84. Produce creature line 3 form indices 11–15
-
-**Goal**: Add production form indices 11 through 15 for creature line 3.
-
-**Description**: Using the approved line 3 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 11–15 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 85. Produce creature line 3 form indices 16–20
-
-**Goal**: Add production form indices 16 through 20 for creature line 3.
-
-**Description**: Using the approved line 3 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 16–20 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 86. Produce creature line 3 form indices 21–25
-
-**Goal**: Add production form indices 21 through 25 for creature line 3.
-
-**Description**: Using the approved line 3 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 21–25 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 87. Produce creature line 3 form indices 26–30
-
-**Goal**: Add production form indices 26 through 30 for creature line 3.
-
-**Description**: Using the approved line 3 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 26–30 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 88. Produce creature line 3 form indices 31–35
-
-**Goal**: Add production form indices 31 through 35 for creature line 3.
-
-**Description**: Using the approved line 3 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 31–35 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 89. Review creature line 3 visual continuity
-
-**Goal**: Decide whether all 35 forms for creature line 3 read as one gradual evolution.
-
-**Description**: Review the complete line 3 sequence against its approved visual reference for identity, adjacent-form change, scale, colour, detail, accessibility text, and manifest provenance. Do not remake assets in this task; record each failed range as a separate bounded remediation task with the affected form indices and acceptance evidence.
-
-## 90. Define the visual reference for creature line 4
-
-**Goal**: Establish one approved visual direction before producing line 4's numbered forms.
-
-**Description**: Using the approved line 4 entry and asset rules in `_docs/creature-catalogue-policy.md`, create a non-production reference sheet covering silhouette, palette, materials, scale, fixed characteristics, and the allowed change between adjacent forms. Record its source and provenance in the manifest, obtain the required visual approval, and produce no numbered production form assets in this task.
-
-## 91. Produce creature line 4 form indices 1–5
-
-**Goal**: Add production form indices 1 through 5 for creature line 4.
-
-**Description**: Using the approved line 4 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 1–5 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 92. Produce creature line 4 form indices 6–10
-
-**Goal**: Add production form indices 6 through 10 for creature line 4.
-
-**Description**: Using the approved line 4 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 6–10 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 93. Produce creature line 4 form indices 11–15
-
-**Goal**: Add production form indices 11 through 15 for creature line 4.
-
-**Description**: Using the approved line 4 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 11–15 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 94. Produce creature line 4 form indices 16–20
-
-**Goal**: Add production form indices 16 through 20 for creature line 4.
-
-**Description**: Using the approved line 4 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 16–20 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 95. Produce creature line 4 form indices 21–25
-
-**Goal**: Add production form indices 21 through 25 for creature line 4.
-
-**Description**: Using the approved line 4 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 21–25 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 96. Produce creature line 4 form indices 26–30
-
-**Goal**: Add production form indices 26 through 30 for creature line 4.
-
-**Description**: Using the approved line 4 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 26–30 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 97. Produce creature line 4 form indices 31–35
-
-**Goal**: Add production form indices 31 through 35 for creature line 4.
-
-**Description**: Using the approved line 4 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 31–35 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 98. Review creature line 4 visual continuity
-
-**Goal**: Decide whether all 35 forms for creature line 4 read as one gradual evolution.
-
-**Description**: Review the complete line 4 sequence against its approved visual reference for identity, adjacent-form change, scale, colour, detail, accessibility text, and manifest provenance. Do not remake assets in this task; record each failed range as a separate bounded remediation task with the affected form indices and acceptance evidence.
-
-## 99. Define the visual reference for creature line 5
-
-**Goal**: Establish one approved visual direction before producing line 5's numbered forms.
-
-**Description**: Using the approved line 5 entry and asset rules in `_docs/creature-catalogue-policy.md`, create a non-production reference sheet covering silhouette, palette, materials, scale, fixed characteristics, and the allowed change between adjacent forms. Record its source and provenance in the manifest, obtain the required visual approval, and produce no numbered production form assets in this task.
-
-## 100. Produce creature line 5 form indices 1–5
-
-**Goal**: Add production form indices 1 through 5 for creature line 5.
-
-**Description**: Using the approved line 5 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 1–5 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 101. Produce creature line 5 form indices 6–10
-
-**Goal**: Add production form indices 6 through 10 for creature line 5.
-
-**Description**: Using the approved line 5 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 6–10 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 102. Produce creature line 5 form indices 11–15
-
-**Goal**: Add production form indices 11 through 15 for creature line 5.
-
-**Description**: Using the approved line 5 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 11–15 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 103. Produce creature line 5 form indices 16–20
-
-**Goal**: Add production form indices 16 through 20 for creature line 5.
-
-**Description**: Using the approved line 5 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 16–20 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 104. Produce creature line 5 form indices 21–25
-
-**Goal**: Add production form indices 21 through 25 for creature line 5.
-
-**Description**: Using the approved line 5 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 21–25 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 105. Produce creature line 5 form indices 26–30
-
-**Goal**: Add production form indices 26 through 30 for creature line 5.
-
-**Description**: Using the approved line 5 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 26–30 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 106. Produce creature line 5 form indices 31–35
-
-**Goal**: Add production form indices 31 through 35 for creature line 5.
-
-**Description**: Using the approved line 5 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 31–35 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 107. Review creature line 5 visual continuity
-
-**Goal**: Decide whether all 35 forms for creature line 5 read as one gradual evolution.
-
-**Description**: Review the complete line 5 sequence against its approved visual reference for identity, adjacent-form change, scale, colour, detail, accessibility text, and manifest provenance. Do not remake assets in this task; record each failed range as a separate bounded remediation task with the affected form indices and acceptance evidence.
-
-## 108. Define the visual reference for creature line 6
-
-**Goal**: Establish one approved visual direction before producing line 6's numbered forms.
-
-**Description**: Using the approved line 6 entry and asset rules in `_docs/creature-catalogue-policy.md`, create a non-production reference sheet covering silhouette, palette, materials, scale, fixed characteristics, and the allowed change between adjacent forms. Record its source and provenance in the manifest, obtain the required visual approval, and produce no numbered production form assets in this task.
-
-## 109. Produce creature line 6 form indices 1–5
-
-**Goal**: Add production form indices 1 through 5 for creature line 6.
-
-**Description**: Using the approved line 6 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 1–5 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 110. Produce creature line 6 form indices 6–10
-
-**Goal**: Add production form indices 6 through 10 for creature line 6.
-
-**Description**: Using the approved line 6 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 6–10 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 111. Produce creature line 6 form indices 11–15
-
-**Goal**: Add production form indices 11 through 15 for creature line 6.
-
-**Description**: Using the approved line 6 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 11–15 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 112. Produce creature line 6 form indices 16–20
-
-**Goal**: Add production form indices 16 through 20 for creature line 6.
-
-**Description**: Using the approved line 6 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 16–20 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 113. Produce creature line 6 form indices 21–25
-
-**Goal**: Add production form indices 21 through 25 for creature line 6.
-
-**Description**: Using the approved line 6 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 21–25 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 114. Produce creature line 6 form indices 26–30
-
-**Goal**: Add production form indices 26 through 30 for creature line 6.
-
-**Description**: Using the approved line 6 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 26–30 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 115. Produce creature line 6 form indices 31–35
-
-**Goal**: Add production form indices 31 through 35 for creature line 6.
-
-**Description**: Using the approved line 6 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 31–35 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 116. Review creature line 6 visual continuity
-
-**Goal**: Decide whether all 35 forms for creature line 6 read as one gradual evolution.
-
-**Description**: Review the complete line 6 sequence against its approved visual reference for identity, adjacent-form change, scale, colour, detail, accessibility text, and manifest provenance. Do not remake assets in this task; record each failed range as a separate bounded remediation task with the affected form indices and acceptance evidence.
-
-## 117. Define the visual reference for creature line 7
-
-**Goal**: Establish one approved visual direction before producing line 7's numbered forms.
-
-**Description**: Using the approved line 7 entry and asset rules in `_docs/creature-catalogue-policy.md`, create a non-production reference sheet covering silhouette, palette, materials, scale, fixed characteristics, and the allowed change between adjacent forms. Record its source and provenance in the manifest, obtain the required visual approval, and produce no numbered production form assets in this task.
-
-## 118. Produce creature line 7 form indices 1–5
-
-**Goal**: Add production form indices 1 through 5 for creature line 7.
-
-**Description**: Using the approved line 7 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 1–5 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 119. Produce creature line 7 form indices 6–10
-
-**Goal**: Add production form indices 6 through 10 for creature line 7.
-
-**Description**: Using the approved line 7 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 6–10 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 120. Produce creature line 7 form indices 11–15
-
-**Goal**: Add production form indices 11 through 15 for creature line 7.
-
-**Description**: Using the approved line 7 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 11–15 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 121. Produce creature line 7 form indices 16–20
-
-**Goal**: Add production form indices 16 through 20 for creature line 7.
-
-**Description**: Using the approved line 7 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 16–20 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 122. Produce creature line 7 form indices 21–25
-
-**Goal**: Add production form indices 21 through 25 for creature line 7.
-
-**Description**: Using the approved line 7 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 21–25 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 123. Produce creature line 7 form indices 26–30
-
-**Goal**: Add production form indices 26 through 30 for creature line 7.
-
-**Description**: Using the approved line 7 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 26–30 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 124. Produce creature line 7 form indices 31–35
-
-**Goal**: Add production form indices 31 through 35 for creature line 7.
-
-**Description**: Using the approved line 7 visual reference and `_docs/creature-catalogue-policy.md`, generate or import only form indices 31–35 and add their asset path, accessible description, source, and licence or generation provenance to the manifest. Verify format, dimensions, identifiers, adjacent-form progression, and catalogue references for these five forms; stop if either prerequisite is absent.
-
-## 125. Review creature line 7 visual continuity
-
-**Goal**: Decide whether all 35 forms for creature line 7 read as one gradual evolution.
-
-**Description**: Review the complete line 7 sequence against its approved visual reference for identity, adjacent-form change, scale, colour, detail, accessibility text, and manifest provenance. Do not remake assets in this task; record each failed range as a separate bounded remediation task with the affected form indices and acceptance evidence.
-
-## 126. Validate the complete creature catalogue
+## 70. Validate the complete creature catalogue
 
 **Goal**: Prove that every approved form index and level mapping is complete and usable.
 
 **Description**: Add the smallest automated check that reads the agreed manifest and `_docs/levelling-policy.md`, then confirms expected line and form-index counts, unique identifiers, files, metadata, provenance, licence state, and a valid form mapping for every permitted level. Run it against the complete catalogue and report missing, extra, or unmapped items compactly without creating a general asset framework.
 
-## 127. Load the validated creature catalogue
+## 71. Load the validated creature catalogue
 
 **Goal**: Populate the creature-line and form records from the validated manifest reproducibly.
 
 **Description**: Add one idempotent Django management command that refuses an invalid manifest, then creates or updates creature lines and ordered form-index records and applies the active or deactivation policy in `_docs/creature-catalogue-policy.md`. Test initial load, changed metadata, repeated load, invalid input, missing manifest entries, and deactivation without deleting referenced history.
 
-## 128. Implement initial creature selection
+## 72. Implement initial creature selection
 
 **Goal**: Save one approved creature line for a child at the authorised onboarding point.
 
 **Description**: Using `_docs/onboarding-policy.md` and the database catalogue loaded from the validated manifest, add a child-scoped selection service and DRF endpoints that list active lines and save the initial choice under the approved repeat-selection rule. Test incomplete onboarding, unavailable lines, another child, household isolation, repeat attempts, permissions, and audit emission.
 
-## 129. Build the creature chooser
+## 73. Build the creature chooser
 
 **Goal**: Let a child choose an approved creature line through the defined onboarding flow.
 
 **Description**: Build a responsive visual chooser against the selection API, showing approved previews, accessible names, confirmation, loading, error, and incomplete-onboarding states from `_docs/onboarding-policy.md`. Test selection persistence, repeat behaviour, keyboard, touch, reduced motion, missing previews, and narrow screens.
 
-## 130. Calculate creature evolution state
+## 74. Calculate creature evolution state
 
 **Goal**: Resolve the current and previously unlocked forms from a child's level.
 
 **Description**: Using `_docs/levelling-policy.md` and the database catalogue loaded from the validated manifest, add a pure service that returns the current form and ordered unlocked history without database writes. Test every mapping boundary, no selection, incomplete catalogue, maximum level, inactive line, and deterministic ordering.
 
-## 131. Expose creature evolution state
+## 75. Expose creature evolution state
 
 **Goal**: Give the authenticated child a stable API representation of their progression.
 
 **Description**: Add a child-scoped DRF endpoint backed by the evolution service that returns the selected line, current form, and unlocked form history with display and asset metadata. Test permissions, household isolation, incomplete onboarding, missing catalogue data, stable ordering, and compact errors.
 
-## 132. Build the creature evolution gallery
+## 76. Build the creature evolution gallery
 
 **Goal**: Make progression visually rewarding while preserving accessibility and performance.
 
 **Description**: Build the current-creature view and unlocked-history gallery against the evolution API, adding Motion only for point and form transitions that cannot be expressed adequately with CSS. Test locked and missing forms, image loading failure, keyboard and touch navigation, reduced motion, accessible alternatives, and narrow screens.
 
-## 133. Create the parent overview API
+## 77. Create the parent overview API
 
 **Goal**: Give parents one bounded summary of household users, balances, levels, and pending work.
 
 **Description**: Add a parent-only DRF endpoint that composes current household, ledger, level, creature, and pending-submission queries without creating a duplicate reporting data model. Test household isolation, empty and partial data, stable ordering, query count, child denial, and compact errors.
 
-## 134. Build the parent overview dashboard
+## 78. Build the parent overview dashboard
 
 **Goal**: Present the household summary and direct parents to existing management flows.
 
 **Description**: Build a responsive dashboard against the parent overview API with users, balances, levels, creatures, and pending counts, linking to the existing account, chore, approval, and reward screens. Test loading, empty, partial, error, retry, keyboard, and narrow-screen states without duplicating those management interfaces.
 
-## 135. Expose the audit trail to parents
+## 79. Expose the audit trail to parents
 
 **Goal**: Let authorised parents review sensitive actions in their own household.
 
 **Description**: Add a read-only parent DRF endpoint over the audit-event schema with native pagination and only the filters required for actor, action, and date. Test immutability, redaction, household isolation, child denial, stable ordering, filter validation, and compact errors.
 
-## 136. Build the audit-history interface
+## 80. Build the audit-history interface
 
 **Goal**: Make household audit events understandable without exposing secrets.
 
 **Description**: Build a parent-only paginated audit view with actor, action, target, time, and safe context from the audit API. Test redaction, empty, loading, filter, error, retry, keyboard, and narrow-screen states without offering edit or delete controls.
 
-## 137. Test child submission and child-device approval
+## 81. Test child submission and child-device approval
 
 **Goal**: Protect the path from child attestation through a parent's decision on the child's device.
 
 **Description**: Add one Playwright suite covering child login, chore selection, attestation, pending state, parent identification, PIN failure, approval credit, and rejection without credit on the child device using isolated data. Keep diagnostics compact and free of credentials and PIN values, and do not cover the separate parent queue.
 
-## 138. Test parent-queue approval and rejection
+## 82. Test parent-queue approval and rejection
 
 **Goal**: Protect approval decisions made from a parent's authenticated device.
 
 **Description**: Add one Playwright suite covering parent login, the pending queue, required PIN re-verification, approval credit, rejection without credit, stale decisions, and empty state using isolated data. Keep diagnostics compact and free of credentials and PIN values, and do not repeat the child-submission setup through the UI.
 
-## 139. Test the reward journey
+## 83. Test the reward journey
 
 **Goal**: Protect point spending and any approved parent fulfilment transitions end to end.
 
 **Description**: Add one Playwright suite based on `_docs/reward-policy.md` covering login, available balance, supported conversion, insufficient funds, successful redemption, and every required parent state. Use isolated data and verify exact ledger effects, audit history, retry behaviour, and secret-free diagnostics.
 
-## 140. Test creature onboarding and selection
+## 84. Test creature onboarding and selection
 
 **Goal**: Protect the child's approved route to an initial creature choice.
 
 **Description**: Add one Playwright suite using `_docs/onboarding-policy.md` and the validated catalogue to cover incomplete onboarding, available lines, selection confirmation, saved choice, and the approved repeat-selection rule. Use isolated data and verify keyboard use, reduced motion, missing previews, and secret-free diagnostics without exercising level-up.
 
-## 141. Test levelling and creature evolution
+## 85. Test levelling and creature evolution
 
 **Goal**: Protect the path from a known balance to a newly visible creature form.
 
 **Description**: Add one Playwright suite using `_docs/levelling-policy.md` and a preselected creature to cover displayed cost, point debit, level change, current form, and unlocked history. Use isolated data and verify insufficient funds, maximum level, reduced motion, and secret-free diagnostics without repeating onboarding.
 
-## 142. Audit current-scope accessibility
+## 86. Audit current-scope accessibility
 
 **Goal**: Produce a bounded WCAG 2.2 AA findings list for the implemented household journeys.
 
 **Description**: In one time-boxed review, audit login, child chores, parent management, approvals, points, rewards, levelling, creature, dashboard, and audit screens with automated checks plus one representative keyboard and screen-reader pass. Do not fix findings in this task; record each reproducible issue as a separate session-sized backlog entry with severity, affected screen, expected behaviour, and verification method.
 
-## 143. Audit current-scope security
+## 87. Audit current-scope security
 
 **Goal**: Produce a bounded security findings list for the implemented trust boundaries.
 
 **Description**: In one time-boxed review, inspect sessions and CSRF, role and household isolation, PIN handling, ledger mutations, idempotency, secrets, logs, dependencies, inputs, and browser security headers against the implemented flows. Do not fix findings in this task; record each reproducible issue as a separate session-sized backlog entry with severity, evidence, trust boundary, and regression-test expectation.
 
-## 144. Verify the current product plan end to end
+## 88. Verify the current product plan end to end
 
 **Goal**: Produce an evidence-backed go or no-go decision for the current planned scope.
 
