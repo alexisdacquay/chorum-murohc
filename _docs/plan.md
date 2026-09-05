@@ -6,10 +6,14 @@
 
 Household chore management web app with a points economy, gamification, and creature evolution system.
 
-## Stack
+## Implementation Track
 
-- Python, uv, Django
-- Local development (laptop), cloud hosting later
+- Django remains the required backend framework, with Python as the primary
+  implementation language.
+- The selected frontend, data, testing, and architectural choices are recorded
+  in the [design document](design.md).
+- Development begins locally, with containerised and distributed operation
+  treated as a long-term evolution rather than an immediate requirement.
 
 ## Users & Auth
 

@@ -21,13 +21,16 @@ agreed household rewards.
 
 ## Intended technology
 
-- Python
-- Django
-- [uv](https://docs.astral.sh/uv/) for Python project and dependency management
+- Python and Django REST Framework for the backend API
+- React and TypeScript for the frontend
+- PostgreSQL for persistent data
+- Tailwind CSS and shadcn/ui for the interface
+- [uv](https://docs.astral.sh/uv/) and pnpm for dependency management
 
 ## Documentation
 
 - [Project plan](_docs/plan.md) — current product scope and requirements
+- [Design](_docs/design.md) — selected architecture and implementation track
 - [Roadmap](docs/roadmap-v1.md) — ideas intentionally deferred beyond the current scope
 
 ## Local development
