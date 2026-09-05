@@ -12,7 +12,7 @@ blanket installation approval.
 
 | Gate | Earliest task | Proposed purpose | Status |
 | --- | --- | --- | --- |
-| DA-01 | T001 | `pytest` and `pytest-django` baseline | Pending exact proposal and approval |
+| DA-01 | T001 | `pytest` and `pytest-django` baseline | Approved |
 | DA-02 | T003 | One Python formatter and linter | Pending exact proposal and approval |
 | DA-03 | T005 | PostgreSQL driver | Pending exact proposal and approval |
 | DA-04 | T010 | Django REST Framework | Pending exact proposal and approval |
@@ -23,6 +23,17 @@ blanket installation approval.
 | DA-09 | T028 | React Hook Form and Zod | Pending exact proposal and approval |
 | DA-10 | T083 | Motion, only if CSS is demonstrably insufficient | Conditional; pending exact proposal and approval |
 | DA-11 | T088 | Playwright | Pending exact proposal and approval |
+
+### DA-01 — Approved
+
+- Direct package(s): `pytest`, `pytest-django`
+- Ecosystem and manifest: Python, `pyproject.toml` and generated `uv.lock`
+- Purpose: establish the canonical locked pytest baseline
+- Permitted version range(s): `pytest>=9.1.1,<10.0`, `pytest-django>=4.14.0,<5.0`
+- Approved by: alexisdacquay
+- Approval date: 2026-09-05
+- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/1#issuecomment-5555010370
+- Owning task: T001
 
 ## Approval record template
 
