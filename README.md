@@ -7,7 +7,8 @@ Children complete chores to earn points, parents approve the work, and saved
 points help creatures evolve over time. Points can also be exchanged for
 agreed household rewards.
 
-> **Project status:** Planning. The application has not yet been implemented.
+> **Project status:** Early development. The Django project and initial
+> `chores` app have been created; product features are not yet implemented.
 
 ## Planned features
 
@@ -29,10 +30,49 @@ agreed household rewards.
 - [Project plan](_docs/plan.md) — current product scope and requirements
 - [Roadmap](docs/roadmap-v1.md) — ideas intentionally deferred beyond the current scope
 
-## Development
+## Local development
 
-Local setup and contribution instructions will be added when the application
-is scaffolded.
+### Prerequisites
 
-Do not commit credentials or local configuration. Store local secrets in
-`.env`, which is excluded from version control.
+- Python 3.13 or later
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+
+### Setup
+
+Install the locked dependencies and prepare the local database:
+
+```shell
+uv sync
+uv run python manage.py migrate
+```
+
+Start the development server:
+
+```shell
+uv run python manage.py runserver
+```
+
+Then open <http://127.0.0.1:8000/>.
+
+### Checks and tests
+
+```shell
+uv run python manage.py check
+uv run python manage.py test
+```
+
+## Project structure
+
+- `chorum/` — project-wide configuration and URL routing
+- `chores/` — the household chores Django app
+- `_docs/plan.md` — current product plan and requirements
+- `manage.py` — command-line entry point for Django tasks
+
+## Configuration and security
+
+The generated settings are suitable for local development only. Before a
+deployment, set `DJANGO_SECRET_KEY` and review Django's `DEBUG` and
+`ALLOWED_HOSTS` settings.
+
+Do not commit credentials or local configuration. `.env` is excluded from
+version control.
