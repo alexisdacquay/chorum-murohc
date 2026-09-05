@@ -13,7 +13,7 @@ blanket installation approval.
 | Gate | Earliest task | Proposed purpose | Status |
 | --- | --- | --- | --- |
 | DA-01 | T001 | `pytest` and `pytest-django` baseline | Approved |
-| DA-02 | T003 | One Python formatter and linter | Pending exact proposal and approval |
+| DA-02 | T003 | One Python formatter and linter | Approved |
 | DA-03 | T005 | PostgreSQL driver | Pending exact proposal and approval |
 | DA-04 | T010 | Django REST Framework | Pending exact proposal and approval |
 | DA-05 | T011 | React, TypeScript, Vite, Vitest, and Testing Library foundation | Pending exact proposal and approval |
@@ -34,6 +34,17 @@ blanket installation approval.
 - Approval date: 2026-09-05
 - Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/1#issuecomment-5555010370
 - Owning task: T001
+
+### DA-02 — Approved
+
+- Direct package(s): `ruff`
+- Ecosystem and manifest: Python, `pyproject.toml` and generated `uv.lock`
+- Purpose: provide one locked backend formatter and linter for reproducible formatting and lint checks
+- Permitted version range(s): `ruff>=0.16.6,<0.17.0`
+- Approved by: alexisdacquay
+- Approval date: 2026-09-06
+- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/3#issuecomment-5555495792
+- Owning task: T003
 
 ## Approval record template
 
