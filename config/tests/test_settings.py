@@ -46,6 +46,8 @@ else:
         'database_name': str(database['NAME']),
         'database_name_is_path': isinstance(database['NAME'], Path),
         'database_keys': sorted(database),
+        'database_target': os.environ.get('DJANGO_DB_TARGET'),
+        'test_database_name': database.get('TEST', {}).get('NAME'),
         'database_fields_match_environment': {
             key: environment_name in os.environ
             and database.get(key) == os.environ[environment_name]
@@ -118,6 +120,20 @@ def production_environment():
     }
 
 
+def guarded_postgresql_environment(target='task_t005_0123abcd'):
+    database_name = f'chorum_murohc_{target}'
+    return {
+        'DJANGO_ENVIRONMENT': 'development',
+        'DJANGO_DB_ENGINE': 'postgresql',
+        'DJANGO_DB_TARGET': target,
+        'DJANGO_DB_NAME': database_name,
+        'DJANGO_DB_USER': database_name,
+        'DJANGO_DB_PASSWORD': 'replace-at-runtime',
+        'DJANGO_DB_HOST': ('127.0.0.1' if target.startswith('task_') else 'postgres'),
+        'DJANGO_DB_PORT': '0005432',
+    }
+
+
 def assert_configuration_error(overrides, expected_message):
     result = settings_probe(overrides)
 
@@ -151,11 +167,16 @@ def test_missing_variables_use_safe_development_defaults_without_creating_db():
 
 def test_probe_does_not_inherit_ambient_django_variables(monkeypatch):
     monkeypatch.setenv('DJANGO_DEBUG', 'not-valid')
+    monkeypatch.setenv('DJANGO_DB_TARGET', 'production')
+    monkeypatch.setenv('DJANGO_DB_PASSWORD', 'ambient-value-that-must-not-escape')
+    monkeypatch.setenv('DATABASE_URL', 'postgresql://ambient.invalid/forbidden')
 
     result = settings_probe()
 
     assert result['status'] == 'ok'
     assert result['debug'] is True
+    assert result['database_engine'] == 'django.db.backends.sqlite3'
+    assert result['database_target'] is None
 
 
 @pytest.mark.parametrize(
@@ -398,6 +419,14 @@ def test_sqlite_rejects_present_postgresql_only_variables(
     )
 
 
+@pytest.mark.parametrize('target_value', ['', 'task_t005_0123abcd'])
+def test_sqlite_rejects_every_present_database_target(target_value):
+    assert_configuration_error(
+        {'DJANGO_DB_TARGET': target_value},
+        'DJANGO_DB_TARGET is invalid.',
+    )
+
+
 def test_postgresql_maps_required_fields_without_loading_driver():
     result = settings_probe(production_environment())
 
@@ -413,18 +442,266 @@ def test_postgresql_maps_required_fields_without_loading_driver():
     ]
     assert all(result['database_fields_match_environment'].values())
     assert result['database_port'] == '5432'
+    assert result['database_target'] is None
+    assert result['test_database_name'] is None
     assert result['postgresql_driver_loaded'] is False
 
 
 def test_postgresql_engine_accepts_normalised_value_in_development():
-    environment = production_environment()
-    environment['DJANGO_ENVIRONMENT'] = 'development'
+    environment = guarded_postgresql_environment()
     environment['DJANGO_DB_ENGINE'] = ' PoStGrEsQl '
 
     result = settings_probe(environment)
 
     assert result['status'] == 'ok'
     assert result['database_engine'] == 'django.db.backends.postgresql'
+
+
+@pytest.mark.parametrize(
+    'target',
+    [
+        'task_t000_abcdefgh',
+        'task_t999_0123456789abcdef',
+        'ci_1_1_abcdefgh',
+        'ci_00000000000000000000_000_0123456789abcdef',
+    ],
+)
+def test_development_postgresql_accepts_exact_target_boundaries(target):
+    result = settings_probe(guarded_postgresql_environment(target))
+
+    expected_database_name = f'chorum_murohc_{target}'
+    assert result['status'] == 'ok'
+    assert result['database_target'] == target
+    assert result['database_name'] == expected_database_name
+    assert result['test_database_name'] == f'test_{expected_database_name}'
+
+
+def test_maximum_ci_target_keeps_every_derived_identifier_within_postgresql_limit():
+    target = 'ci_12345678901234567890_123_0123456789abcdef'
+
+    result = settings_probe(guarded_postgresql_environment(target))
+
+    assert result['status'] == 'ok'
+    assert len(target.encode('ascii')) == 44
+    assert len(result['database_name'].encode('ascii')) == 58
+    assert len(result['test_database_name'].encode('ascii')) == 63
+
+
+def test_maximum_task_target_has_the_expected_derived_identifier_lengths():
+    target = 'task_t005_0123456789abcdef'
+
+    result = settings_probe(guarded_postgresql_environment(target))
+
+    assert result['status'] == 'ok'
+    assert len(target.encode('ascii')) == 26
+    assert len(result['database_name'].encode('ascii')) == 40
+    assert len(result['test_database_name'].encode('ascii')) == 45
+
+
+def test_development_postgresql_requires_database_target():
+    environment = guarded_postgresql_environment()
+    environment.pop('DJANGO_DB_TARGET')
+
+    assert_configuration_error(
+        environment,
+        'DJANGO_DB_TARGET is required.',
+    )
+
+
+@pytest.mark.parametrize(
+    'target',
+    [
+        '',
+        '   ',
+        ' task_t005_0123abcd',
+        'task_t005_0123abcd ',
+        'task_t005_0123abcd\n',
+        'TASK_t005_0123abcd',
+        'task_T005_0123abcd',
+        'task_t005_ABCDefgh',
+        'task_t005_abcdefg',
+        'task_t005_abcdefghijklmnopq',
+        'task_t05_0123abcd',
+        'task_t0005_0123abcd',
+        'task_t005_',
+        'task_t005_0123_abcd',
+        'task_t005_0123-abcd',
+        'task_t005_0123.abcd',
+        'task_t005_0123abcé',
+        'task_t٠٠٥_0123abcd',
+        'ci__1_0123abcd',
+        'ci_123456789012345678901_1_0123abcd',
+        'ci_1__0123abcd',
+        'ci_1_1234_0123abcd',
+        'ci_1_1_abcdefg',
+        'ci_1_1_abcdefghijklmnopq',
+        'ci_1_1_0123_abcd',
+        'ci_١_1_0123abcd',
+        'unknown_1_1_0123abcd',
+        'prod',
+        'production',
+        'stage',
+        'staging',
+        'shared',
+        'main',
+        'default',
+        'x' * 5000,
+    ],
+)
+def test_development_postgresql_rejects_non_contract_database_targets(target):
+    environment = guarded_postgresql_environment()
+    environment['DJANGO_DB_TARGET'] = target
+
+    assert_configuration_error(environment, 'DJANGO_DB_TARGET is invalid.')
+
+
+@pytest.mark.parametrize(
+    ('target', 'allowed_host'),
+    [
+        ('task_t005_0123abcd', '127.0.0.1'),
+        ('ci_123456789_1_backend01', 'postgres'),
+    ],
+)
+def test_guarded_postgresql_accepts_only_the_host_for_its_target_lineage(
+    target,
+    allowed_host,
+):
+    result = settings_probe(guarded_postgresql_environment(target))
+
+    assert result['status'] == 'ok'
+    assert result['database_fields_match_environment']['HOST'] is True
+    assert guarded_postgresql_environment(target)['DJANGO_DB_HOST'] == allowed_host
+
+
+@pytest.mark.parametrize(
+    'rejected_host',
+    [
+        '',
+        ' ',
+        ' 127.0.0.1',
+        '127.0.0.1 ',
+        'localhost',
+        'postgres',
+        'database.invalid',
+        '/var/run/postgresql',
+        'postgresql://127.0.0.1',
+        '0.0.0.0',
+        '::',
+        '::1',
+        '[::1]',
+        '127.0.0.2',
+        '*',
+    ],
+)
+def test_task_target_rejects_every_non_loopback_contract_host(rejected_host):
+    environment = guarded_postgresql_environment()
+    environment['DJANGO_DB_HOST'] = rejected_host
+
+    expected_message = (
+        'DJANGO_DB_HOST is required.'
+        if not rejected_host.strip()
+        else 'DJANGO_DB_HOST is invalid.'
+    )
+    assert_configuration_error(environment, expected_message)
+
+
+@pytest.mark.parametrize(
+    'rejected_host',
+    [
+        '',
+        ' ',
+        ' postgres',
+        'postgres ',
+        '127.0.0.1',
+        'localhost',
+        'database.invalid',
+        '/var/run/postgresql',
+        'postgresql://postgres',
+        '0.0.0.0',
+        '::',
+        '::1',
+        '[::1]',
+        '127.0.0.2',
+        '*',
+    ],
+)
+def test_ci_target_rejects_every_non_service_alias_contract_host(rejected_host):
+    environment = guarded_postgresql_environment('ci_1_1_0123abcd')
+    environment['DJANGO_DB_HOST'] = rejected_host
+
+    expected_message = (
+        'DJANGO_DB_HOST is required.'
+        if not rejected_host.strip()
+        else 'DJANGO_DB_HOST is invalid.'
+    )
+    assert_configuration_error(environment, expected_message)
+
+
+@pytest.mark.parametrize(
+    ('database_variable', 'mismatched_value'),
+    [
+        ('DJANGO_DB_NAME', 'chorum_murohc_task_t005_other000'),
+        ('DJANGO_DB_USER', 'chorum_murohc_task_t005_other000'),
+    ],
+)
+def test_guarded_postgresql_rejects_mismatched_derived_fields(
+    database_variable,
+    mismatched_value,
+):
+    environment = guarded_postgresql_environment()
+    environment[database_variable] = mismatched_value
+
+    assert_configuration_error(
+        environment,
+        f'{database_variable} is invalid.',
+    )
+
+
+def test_guarded_postgresql_maps_exact_derived_fields_and_normalised_port():
+    environment = guarded_postgresql_environment()
+
+    result = settings_probe(environment)
+
+    assert result['status'] == 'ok'
+    assert result['database_keys'] == [
+        'ENGINE',
+        'HOST',
+        'NAME',
+        'PASSWORD',
+        'PORT',
+        'TEST',
+        'USER',
+    ]
+    assert all(result['database_fields_match_environment'].values())
+    assert result['database_port'] == '5432'
+    assert result['test_database_name'] == ('test_chorum_murohc_task_t005_0123abcd')
+
+
+@pytest.mark.parametrize(
+    'database_variable',
+    [
+        'DJANGO_DB_NAME',
+        'DJANGO_DB_USER',
+        'DJANGO_DB_PASSWORD',
+        'DJANGO_DB_HOST',
+        'DJANGO_DB_PORT',
+    ],
+)
+@pytest.mark.parametrize('field_state', ['missing', 'blank'])
+def test_guarded_postgresql_requires_each_non_blank_connection_field(
+    database_variable,
+    field_state,
+):
+    environment = guarded_postgresql_environment()
+    if field_state == 'missing':
+        environment.pop(database_variable)
+    else:
+        environment[database_variable] = '   '
+
+    assert_configuration_error(
+        environment,
+        f'{database_variable} is required.',
+    )
 
 
 @pytest.mark.parametrize(
@@ -501,6 +778,14 @@ def test_production_rejects_explicit_sqlite_engine():
     environment['DJANGO_DB_ENGINE'] = 'sqlite'
 
     assert_configuration_error(environment, 'DJANGO_DB_ENGINE is invalid.')
+
+
+@pytest.mark.parametrize('target_value', ['', 'task_t005_0123abcd'])
+def test_production_rejects_every_present_database_target(target_value):
+    environment = production_environment()
+    environment['DJANGO_DB_TARGET'] = target_value
+
+    assert_configuration_error(environment, 'DJANGO_DB_TARGET is invalid.')
 
 
 @pytest.mark.parametrize(

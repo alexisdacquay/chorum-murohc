@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+import re
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -143,6 +144,9 @@ if is_production and database_engine != 'postgresql':
     _invalid('DJANGO_DB_ENGINE')
 
 if database_engine == 'sqlite':
+    if 'DJANGO_DB_TARGET' in os.environ:
+        _invalid('DJANGO_DB_TARGET')
+
     for conflicting_variable in (
         'DJANGO_DB_USER',
         'DJANGO_DB_PASSWORD',
@@ -177,6 +181,24 @@ if database_engine == 'sqlite':
         }
     }
 else:
+    database_target_value = os.environ.get('DJANGO_DB_TARGET')
+    if is_production:
+        if database_target_value is not None:
+            _invalid('DJANGO_DB_TARGET')
+        database_target = None
+    else:
+        if database_target_value is None:
+            _required('DJANGO_DB_TARGET')
+        if not (
+            re.fullmatch(r'task_t[0-9]{3}_[a-z0-9]{8,16}', database_target_value)
+            or re.fullmatch(
+                r'ci_[0-9]{1,20}_[0-9]{1,3}_[a-z0-9]{8,16}',
+                database_target_value,
+            )
+        ):
+            _invalid('DJANGO_DB_TARGET')
+        database_target = database_target_value
+
     database_variables = (
         'DJANGO_DB_NAME',
         'DJANGO_DB_USER',
@@ -202,16 +224,33 @@ else:
     ):
         _invalid('DJANGO_DB_PORT')
 
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': database_values['DJANGO_DB_NAME'],
-            'USER': database_values['DJANGO_DB_USER'],
-            'PASSWORD': database_values['DJANGO_DB_PASSWORD'],
-            'HOST': database_values['DJANGO_DB_HOST'],
-            'PORT': database_port,
-        }
+    database_configuration = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': database_values['DJANGO_DB_NAME'],
+        'USER': database_values['DJANGO_DB_USER'],
+        'PASSWORD': database_values['DJANGO_DB_PASSWORD'],
+        'HOST': database_values['DJANGO_DB_HOST'],
+        'PORT': database_port,
     }
+
+    if database_target is not None:
+        expected_database_name = f'chorum_murohc_{database_target}'
+        if database_values['DJANGO_DB_NAME'] != expected_database_name:
+            _invalid('DJANGO_DB_NAME')
+        if database_values['DJANGO_DB_USER'] != expected_database_name:
+            _invalid('DJANGO_DB_USER')
+
+        expected_host = (
+            '127.0.0.1' if database_target.startswith('task_') else 'postgres'
+        )
+        if database_values['DJANGO_DB_HOST'] != expected_host:
+            _invalid('DJANGO_DB_HOST')
+
+        database_configuration['TEST'] = {
+            'NAME': f'test_{expected_database_name}',
+        }
+
+    DATABASES = {'default': database_configuration}
 
 
 # Password validation
