@@ -201,12 +201,18 @@ def test_backend_uses_the_guarded_service_and_exact_command_sequence():
 def test_credentials_are_scoped_only_to_the_required_backend_steps():
     backend = job_block(workflow_text(), 'backend')
     steps = step_blocks(backend)
+    bootstrap_value = (
+        't017-bootstrap-${{ github.run_id }}-${{ github.run_attempt }}-'
+        "${{ github.job || 'backend' }}-synthetic"
+    )
     bootstrap_steps = [
         step for step in steps if 'CI_POSTGRES_BOOTSTRAP_PASSWORD:' in step
     ]
     restricted_steps = [step for step in steps if 'DJANGO_DB_PASSWORD:' in step]
 
     assert len(bootstrap_steps) == 2
+    assert backend.count(bootstrap_value) == 3
+    assert f'POSTGRES_PASSWORD: {bootstrap_value}' in backend
     assert bootstrap_steps[0].startswith('      - name: Prepare isolated PostgreSQL')
     assert bootstrap_steps[1].startswith(
         '      - name: Clean isolated PostgreSQL resources'
