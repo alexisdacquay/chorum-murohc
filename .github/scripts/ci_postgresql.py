@@ -280,7 +280,7 @@ class PsycopgGateway:
             'CREATE ROLE {} WITH LOGIN PASSWORD %s '
             'NOSUPERUSER CREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS'
         ).format(_identifier(name))
-        with self.admin_connection.cursor() as cursor:
+        with psycopg.ClientCursor(self.admin_connection) as cursor:
             cursor.execute(query, (password,))
 
     def create_database(self, name, owner):

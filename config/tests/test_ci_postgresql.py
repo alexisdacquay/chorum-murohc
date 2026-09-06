@@ -210,6 +210,45 @@ def test_prepare_creates_and_verifies_only_the_derived_resources(ci_postgresql):
     assert gateway.events[-1] == ('close',)
 
 
+def test_create_role_uses_client_parameter_binding_required_by_postgresql_ddl(
+    ci_postgresql,
+    monkeypatch,
+):
+    recorded = []
+    connection = object()
+
+    class RecordingClientCursor:
+        def __init__(self, supplied_connection):
+            assert supplied_connection is connection
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def execute(self, query, parameters):
+            recorded.append((query, parameters))
+
+    monkeypatch.setattr(
+        ci_postgresql.psycopg,
+        'ClientCursor',
+        RecordingClientCursor,
+    )
+    gateway = object.__new__(ci_postgresql.PsycopgGateway)
+    gateway.admin_connection = connection
+
+    gateway.create_role(
+        'chorum_murohc_ci_1_1_backend01',
+        'synthetic-restricted-value',
+    )
+
+    assert len(recorded) == 1
+    query, parameters = recorded[0]
+    assert 'CREATE ROLE' in query.as_string(None)
+    assert parameters == ('synthetic-restricted-value',)
+
+
 @pytest.mark.parametrize(
     'identity',
     [
