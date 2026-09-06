@@ -7,6 +7,30 @@ priority over maximising concurrency.
 ## Roles
 
 - PM - grooms a task before anyone implements it, follows `_docs/team/pm.md`
+- Engineer - implements one groomed task, follows `_docs/team/software-engineer.md`
+- QA - checks the result against the acceptance criteria, follows `_docs/team/qa-engineer.md`
+
+## Orchestrator
+
+The main session is the orchestrator. It launches the PM, the engineer
+and QA as subagents. It does not groom, implement or test itself.
+
+### Lifecycle
+
+1. Pick the next open issue from the backlog
+2. PM grooms it
+3. Engineer implements it
+4. QA verifies it
+5. On FAIL, back to step 3 with the QA comment as input
+6. On PASS, close the issue
+7. Repeat until the backlog is empty
+
+### Rules
+
+- Do not skip step 2
+- The engineer does not close the issue
+- QA does not fix the code, only outputs PASS or FAIL
+- The orchestrator closes the issue only after QA outputs PASS
 
 ## Unit of work
 
@@ -202,7 +226,8 @@ secrets to untrusted pull requests.
 ## External and host actions
 
 Issue assignment authorises repository-local changes plus pushing the declared
-feature branch and opening or updating its pull request. It does not authorise:
+feature branch and opening or updating its pull request. The standing authority
+below also authorises its exact task-scoped local actions. Neither authorises:
 
 - host scheduler or service changes, global installs, or unrelated filesystem
   changes;
@@ -211,10 +236,38 @@ feature branch and opening or updating its pull request. It does not authorise:
 - uploading data, generating media through an external provider, publishing,
   or messaging third parties.
 
-Each such action needs a separate recorded approval naming the approver,
-service or host, data exposure, expected cost, rollback, and exact scope. Prefer
-a repository-owned simulation or documented command when that proves the task
-without the external mutation.
+### Standing local-development authority
+
+The project owner's [recorded grant](https://github.com/alexisdacquay/chorum-murohc/issues/5#issuecomment-5559116428)
+gives the orchestrator and all sub-agents standing authority for reversible,
+task-scoped local-development work. They need no repeated approval to:
+
+- generate test-only credentials and synthetic data;
+- create isolated worktrees and branches, commit, push declared feature
+  branches, and open or update pull requests;
+- install approved dependencies and regenerate their lockfiles in the owning
+  worktree;
+- pull pinned official images;
+- run loopback-only disposable containers or services with transient storage
+  and no secret mounts;
+- create, migrate, use, and drop uniquely named, proven-isolated test databases;
+- create task-local caches and artifacts; and
+- clean up these task-owned resources.
+
+Record these actions as non-secret issue, pull-request, or handoff evidence. This
+standing authority is the required local-action approval: missing duplicate
+approval must not block the Ready gate.
+
+Stop only when isolation cannot be proven, or when an action involves shared,
+staging, or production systems; real-user data; public or paid infrastructure;
+third-party publishing or messaging outside the authorised repository workflow;
+reading secret files; broad destructive host changes; or a material scope
+change. Do not weaken the secrets rules above.
+
+Any external or host action not covered by this standing authority needs a
+separate recorded approval naming the approver, service or host, data exposure,
+expected cost, rollback, and exact scope. Prefer a repository-owned simulation
+or documented command when that proves the task without the external mutation.
 
 ## Approval states and authorities
 
