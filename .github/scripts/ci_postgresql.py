@@ -6,13 +6,16 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 import psycopg
+from psycopg import sql
 
 CI_TARGET_PATTERN = re.compile(r'ci_[0-9]{1,20}_[0-9]{1,3}_[a-z0-9]{8,16}')
 IDENTIFIER_PATTERN = re.compile(r'[a-z0-9_]{1,63}')
 EXPECTED_HOST = 'postgres'
 EXPECTED_PORT = '5432'
 EXPECTED_SERVER_VERSION = '17.11'
+EXPECTED_SERVER_VERSION_NUMBER = '170011'
 EXPECTED_BOOTSTRAP_ROLE = 'postgres'
+EXPECTED_BOOTSTRAP_DATABASE = 'postgres'
 EXPECTED_ROLE_FLAGS_TEXT = 'NOSUPERUSER CREATEDB NOCREATEROLE NOREPLICATION'
 
 
@@ -27,6 +30,7 @@ class Contract:
     port: str
     expected_server_version: str
     bootstrap_role: str
+    bootstrap_database: str
     base_database: str
     test_database: str
     role: str
@@ -34,8 +38,8 @@ class Contract:
 
 @dataclass(frozen=True)
 class Credentials:
-    bootstrap_password: str = field(repr=False)
-    restricted_password: str = field(repr=False)
+    bootstrap_password: str | None = field(repr=False)
+    restricted_password: str | None = field(repr=False)
 
 
 @dataclass(frozen=True)
@@ -45,6 +49,7 @@ class RoleState:
     createrole: bool
     replication: bool
     can_login: bool
+    bypass_rls: bool
 
 
 EXPECTED_ROLE_STATE = RoleState(
@@ -53,11 +58,12 @@ EXPECTED_ROLE_STATE = RoleState(
     createrole=False,
     replication=False,
     can_login=True,
+    bypass_rls=False,
 )
 
 
 class Gateway(Protocol):
-    def server_version(self): ...
+    def server_identity(self): ...
 
     def role_state(self, name): ...
 
@@ -93,7 +99,12 @@ def _require_exact(environment, variable, expected):
     return value
 
 
-def configuration_from_environment(environment: Mapping[str, str]):
+def configuration_from_environment(
+    environment: Mapping[str, str],
+    *,
+    require_bootstrap_password=True,
+    require_restricted_password=True,
+):
     target = _required(environment, 'CI_POSTGRES_TARGET')
     if CI_TARGET_PATTERN.fullmatch(target) is None:
         raise ContractError('CI_POSTGRES_TARGET does not match the CI contract.')
@@ -110,6 +121,11 @@ def configuration_from_environment(environment: Mapping[str, str]):
         'CI_POSTGRES_BOOTSTRAP_ROLE',
         EXPECTED_BOOTSTRAP_ROLE,
     )
+    bootstrap_database = _require_exact(
+        environment,
+        'CI_POSTGRES_BOOTSTRAP_DATABASE',
+        EXPECTED_BOOTSTRAP_DATABASE,
+    )
 
     base_database = f'chorum_murohc_{target}'
     test_database = f'test_{base_database}'
@@ -117,6 +133,10 @@ def configuration_from_environment(environment: Mapping[str, str]):
     for resource_name in (base_database, test_database, role):
         if IDENTIFIER_PATTERN.fullmatch(resource_name) is None:
             raise ContractError('A derived PostgreSQL identifier is invalid.')
+
+    _require_exact(environment, 'CI_POSTGRES_BASE_DATABASE', base_database)
+    _require_exact(environment, 'CI_POSTGRES_TEST_DATABASE', test_database)
+    _require_exact(environment, 'CI_POSTGRES_RESTRICTED_ROLE', role)
 
     _require_exact(environment, 'DJANGO_ENVIRONMENT', 'development')
     _require_exact(environment, 'DJANGO_DB_ENGINE', 'postgresql')
@@ -126,12 +146,21 @@ def configuration_from_environment(environment: Mapping[str, str]):
     _require_exact(environment, 'DJANGO_DB_HOST', host)
     _require_exact(environment, 'DJANGO_DB_PORT', port)
 
-    bootstrap_password = _required(
-        environment,
-        'CI_POSTGRES_BOOTSTRAP_PASSWORD',
+    bootstrap_password = (
+        _required(environment, 'CI_POSTGRES_BOOTSTRAP_PASSWORD')
+        if require_bootstrap_password
+        else None
     )
-    restricted_password = _required(environment, 'DJANGO_DB_PASSWORD')
-    if bootstrap_password == restricted_password:
+    restricted_password = (
+        _required(environment, 'DJANGO_DB_PASSWORD')
+        if require_restricted_password
+        else None
+    )
+    if (
+        bootstrap_password is not None
+        and restricted_password is not None
+        and bootstrap_password == restricted_password
+    ):
         raise ContractError('The two synthetic CI credentials must differ.')
 
     return (
@@ -141,6 +170,7 @@ def configuration_from_environment(environment: Mapping[str, str]):
             port=port,
             expected_server_version=expected_server_version,
             bootstrap_role=bootstrap_role,
+            bootstrap_database=bootstrap_database,
             base_database=base_database,
             test_database=test_database,
             role=role,
@@ -152,21 +182,23 @@ def configuration_from_environment(environment: Mapping[str, str]):
     )
 
 
-def _quoted_identifier(name):
+def _identifier(name):
     if IDENTIFIER_PATTERN.fullmatch(name) is None:
         raise ContractError('Refusing an invalid PostgreSQL identifier.')
-    return f'"{name}"'
+    return sql.Identifier(name)
 
 
 class PsycopgGateway:
     def __init__(self, contract, credentials, connector=psycopg.connect):
+        if credentials.bootstrap_password is None:
+            raise ContractError('The bootstrap credential is required for connection.')
         self.contract = contract
         self.credentials = credentials
         self.connector = connector
         self.admin_connection = connector(
             host=contract.host,
             port=contract.port,
-            dbname='postgres',
+            dbname=contract.bootstrap_database,
             user=contract.bootstrap_role,
             password=credentials.bootstrap_password,
             autocommit=True,
@@ -178,16 +210,24 @@ class PsycopgGateway:
             cursor.execute(query, parameters)
             return cursor.fetchone()
 
-    def server_version(self):
-        row = self._fetchone('SHOW server_version')
+    def server_identity(self):
+        row = self._fetchone(
+            """
+            SELECT current_setting('server_version'),
+                   current_setting('server_version_num'),
+                   current_user,
+                   current_database()
+            """
+        )
         if row is None:
-            raise ContractError('PostgreSQL did not report a server version.')
-        return row[0]
+            raise ContractError('PostgreSQL did not report its server identity.')
+        return row
 
     def role_state(self, name):
         row = self._fetchone(
             """
-            SELECT rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolcanlogin
+            SELECT rolsuper, rolcreatedb, rolcreaterole, rolreplication,
+                   rolcanlogin, rolbypassrls
             FROM pg_catalog.pg_roles
             WHERE rolname = %s
             """,
@@ -234,29 +274,32 @@ class PsycopgGateway:
             connection.close()
 
     def create_role(self, name, password):
-        query = (
-            f'CREATE ROLE {_quoted_identifier(name)} WITH LOGIN PASSWORD %s '
-            'NOSUPERUSER CREATEDB NOCREATEROLE NOREPLICATION'
-        )
+        if password is None:
+            raise ContractError('The restricted credential is required for prepare.')
+        query = sql.SQL(
+            'CREATE ROLE {} WITH LOGIN PASSWORD %s '
+            'NOSUPERUSER CREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS'
+        ).format(_identifier(name))
         with self.admin_connection.cursor() as cursor:
             cursor.execute(query, (password,))
 
     def create_database(self, name, owner):
-        query = (
-            f'CREATE DATABASE {_quoted_identifier(name)} '
-            f'WITH OWNER {_quoted_identifier(owner)} TEMPLATE template0 '
-            "ENCODING 'UTF8'"
+        query = sql.SQL(
+            "CREATE DATABASE {} WITH OWNER {} TEMPLATE template0 ENCODING 'UTF8'"
+        ).format(
+            _identifier(name),
+            _identifier(owner),
         )
         with self.admin_connection.cursor() as cursor:
             cursor.execute(query)
 
     def drop_database(self, name):
-        query = f'DROP DATABASE {_quoted_identifier(name)} WITH (FORCE)'
+        query = sql.SQL('DROP DATABASE {} WITH (FORCE)').format(_identifier(name))
         with self.admin_connection.cursor() as cursor:
             cursor.execute(query)
 
     def drop_role(self, name):
-        query = f'DROP ROLE {_quoted_identifier(name)}'
+        query = sql.SQL('DROP ROLE {}').format(_identifier(name))
         with self.admin_connection.cursor() as cursor:
             cursor.execute(query)
 
@@ -269,9 +312,20 @@ def _default_gateway(contract, credentials):
 
 
 def _validate_server(gateway, contract):
-    server_version = gateway.server_version()
-    if server_version != contract.expected_server_version:
+    server_version, version_number, current_role, current_database = (
+        gateway.server_identity()
+    )
+    if (
+        server_version != contract.expected_server_version
+        or version_number != EXPECTED_SERVER_VERSION_NUMBER
+    ):
         raise ContractError('PostgreSQL server version does not match the CI contract.')
+    if current_role != contract.bootstrap_role:
+        raise ContractError('PostgreSQL bootstrap role does not match the CI contract.')
+    if current_database != contract.bootstrap_database:
+        raise ContractError(
+            'PostgreSQL bootstrap database does not match the CI contract.'
+        )
     return server_version
 
 
@@ -334,32 +388,23 @@ def prepare(
         gateway.close()
 
 
-def verify(
-    environment: Mapping[str, str],
-    *,
-    gateway_factory: GatewayFactory = _default_gateway,
-):
-    contract, credentials = configuration_from_environment(environment)
-    gateway = gateway_factory(contract, credentials)
-    try:
-        server_version = _validate_server(gateway, contract)
-        _validate_ready_resources(gateway, contract)
-        _report(
-            'verify',
-            contract,
-            server_version,
-            'base_public_schema=empty; test_database_state=absent',
-        )
-    finally:
-        gateway.close()
-
-
 def cleanup(
     environment: Mapping[str, str],
     *,
     gateway_factory: GatewayFactory = _default_gateway,
 ):
-    contract, credentials = configuration_from_environment(environment)
+    contract, credentials = configuration_from_environment(
+        environment,
+        require_restricted_password=False,
+    )
+    expect_django_cleanup = _required(
+        environment,
+        'CI_POSTGRES_EXPECT_DJANGO_CLEANUP',
+    )
+    if expect_django_cleanup not in {'true', 'false'}:
+        raise ContractError(
+            'CI_POSTGRES_EXPECT_DJANGO_CLEANUP does not match the CI contract.'
+        )
     gateway = gateway_factory(contract, credentials)
     try:
         server_version = _validate_server(gateway, contract)
@@ -373,14 +418,18 @@ def cleanup(
         else:
             _validate_role_state(role_state)
 
+        base_tables = ()
         if base_owner is not None:
             if base_owner != contract.role:
                 raise ContractError('The base PostgreSQL database owner is unsafe.')
-            if gateway.public_tables(contract.base_database):
-                raise ContractError('The base PostgreSQL public schema is not empty.')
+            base_tables = gateway.public_tables(contract.base_database)
 
         if test_owner is not None and test_owner != contract.role:
             raise ContractError('The test PostgreSQL database owner is unsafe.')
+
+        django_cleanup_failed = expect_django_cleanup == 'true' and (
+            test_owner is not None or bool(base_tables)
+        )
 
         if test_owner is not None:
             gateway.drop_database(contract.test_database)
@@ -402,22 +451,25 @@ def cleanup(
             server_version,
             'test_database_state=absent; base_database_state=absent; role_state=absent',
         )
+        if django_cleanup_failed:
+            raise ContractError(
+                'Django cleanup did not leave an absent test database and empty base.'
+            )
     finally:
         gateway.close()
 
 
 def main(arguments=None):
     arguments = sys.argv[1:] if arguments is None else arguments
-    if len(arguments) != 1 or arguments[0] not in {'prepare', 'verify', 'cleanup'}:
+    if len(arguments) != 1 or arguments[0] not in {'prepare', 'cleanup'}:
         print(
-            'Usage: ci_postgresql.py {prepare|verify|cleanup}',
+            'Usage: ci_postgresql.py {prepare|cleanup}',
             file=sys.stderr,
         )
         return 2
 
     operation = {
         'prepare': prepare,
-        'verify': verify,
         'cleanup': cleanup,
     }[arguments[0]]
     try:

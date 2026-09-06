@@ -29,7 +29,12 @@ def valid_environment(target='ci_123456789_1_backend01'):
         'CI_POSTGRES_PORT': '5432',
         'CI_POSTGRES_EXPECTED_VERSION': '17.11',
         'CI_POSTGRES_BOOTSTRAP_ROLE': 'postgres',
+        'CI_POSTGRES_BOOTSTRAP_DATABASE': 'postgres',
         'CI_POSTGRES_BOOTSTRAP_PASSWORD': 'synthetic-bootstrap-value',
+        'CI_POSTGRES_BASE_DATABASE': database_name,
+        'CI_POSTGRES_TEST_DATABASE': f'test_{database_name}',
+        'CI_POSTGRES_RESTRICTED_ROLE': database_name,
+        'CI_POSTGRES_EXPECT_DJANGO_CLEANUP': 'false',
         'DJANGO_ENVIRONMENT': 'development',
         'DJANGO_DB_ENGINE': 'postgresql',
         'DJANGO_DB_TARGET': target,
@@ -45,7 +50,7 @@ class FakeGateway:
     def __init__(self, module, *, include_resources=False, include_test=False):
         self.module = module
         self.events = []
-        self.version = '17.11'
+        self.identity = ('17.11', '170011', 'postgres', 'postgres')
         self.role_states = {}
         self.database_owners = {}
         self.tables = {}
@@ -58,15 +63,16 @@ class FakeGateway:
                 createrole=False,
                 replication=False,
                 can_login=True,
+                bypass_rls=False,
             )
             self.database_owners[contract.base_database] = contract.role
             self.tables[contract.base_database] = ()
             if include_test:
                 self.database_owners[contract.test_database] = contract.role
 
-    def server_version(self):
-        self.events.append(('server_version',))
-        return self.version
+    def server_identity(self):
+        self.events.append(('server_identity',))
+        return self.identity
 
     def role_state(self, name):
         self.events.append(('role_state', name))
@@ -89,6 +95,7 @@ class FakeGateway:
             createrole=False,
             replication=False,
             can_login=True,
+            bypass_rls=False,
         )
 
     def create_database(self, name, owner):
@@ -126,6 +133,7 @@ def test_configuration_derives_only_the_exact_ci_names(ci_postgresql, target):
     assert contract.host == 'postgres'
     assert contract.port == '5432'
     assert contract.bootstrap_role == 'postgres'
+    assert contract.bootstrap_database == 'postgres'
     assert contract.base_database == expected_database
     assert contract.role == expected_database
     assert contract.test_database == f'test_{expected_database}'
@@ -137,6 +145,7 @@ def test_configuration_derives_only_the_exact_ci_names(ci_postgresql, target):
     ('variable', 'invalid_value'),
     [
         ('CI_POSTGRES_HOST', 'database.invalid'),
+        ('CI_POSTGRES_TEST_DATABASE', 'test_chorum_murohc_ci_1_1_other000'),
         ('DJANGO_DB_HOST', '127.0.0.1'),
         ('DJANGO_DB_NAME', 'chorum_murohc_ci_1_1_other000'),
         ('DJANGO_DB_USER', 'chorum_murohc_ci_1_1_other000'),
@@ -201,18 +210,51 @@ def test_prepare_creates_and_verifies_only_the_derived_resources(ci_postgresql):
     assert gateway.events[-1] == ('close',)
 
 
-def test_verify_requires_exact_owner_role_flags_empty_base_and_absent_test_database(
+@pytest.mark.parametrize(
+    'identity',
+    [
+        ('17.10', '170010', 'postgres', 'postgres'),
+        ('17.11', '170011', 'unexpected_role', 'postgres'),
+        ('17.11', '170011', 'postgres', 'unexpected_database'),
+    ],
+)
+def test_prepare_rejects_unexpected_server_identity_without_mutation(
     ci_postgresql,
+    identity,
 ):
-    gateway = FakeGateway(ci_postgresql, include_resources=True)
+    gateway = FakeGateway(ci_postgresql)
+    gateway.identity = identity
 
-    ci_postgresql.verify(valid_environment(), gateway_factory=lambda *_: gateway)
+    with pytest.raises(ci_postgresql.ContractError):
+        ci_postgresql.prepare(valid_environment(), gateway_factory=lambda *_: gateway)
 
+    assert not any(
+        event[0] in {'create_role', 'create_database'} for event in gateway.events
+    )
+
+
+@pytest.mark.parametrize(
+    'existing_resource', ['role', 'base_database', 'test_database']
+)
+def test_prepare_requires_fresh_exact_resources_before_mutation(
+    ci_postgresql,
+    existing_resource,
+):
+    gateway = FakeGateway(ci_postgresql)
     contract, _ = ci_postgresql.configuration_from_environment(valid_environment())
-    assert ('role_state', contract.role) in gateway.events
-    assert ('database_owner', contract.base_database) in gateway.events
-    assert ('database_owner', contract.test_database) in gateway.events
-    assert ('public_tables', contract.base_database) in gateway.events
+    if existing_resource == 'role':
+        gateway.role_states[contract.role] = ci_postgresql.EXPECTED_ROLE_STATE
+    elif existing_resource == 'base_database':
+        gateway.database_owners[contract.base_database] = contract.role
+    else:
+        gateway.database_owners[contract.test_database] = contract.role
+
+    with pytest.raises(ci_postgresql.ContractError):
+        ci_postgresql.prepare(valid_environment(), gateway_factory=lambda *_: gateway)
+
+    assert not any(
+        event[0] in {'create_role', 'create_database'} for event in gateway.events
+    )
 
 
 def test_cleanup_validates_every_identity_before_exact_name_mutation(ci_postgresql):
@@ -253,7 +295,22 @@ def test_cleanup_validates_every_identity_before_exact_name_mutation(ci_postgres
     assert gateway.events[-1] == ('close',)
 
 
-@pytest.mark.parametrize('unsafe_state', ['owner', 'flags', 'tables'])
+def test_cleanup_does_not_touch_similarly_named_neighbour_resources(ci_postgresql):
+    gateway = FakeGateway(ci_postgresql, include_resources=True, include_test=True)
+    neighbouring_role = 'chorum_murohc_ci_123456789_1_backend02'
+    neighbouring_database = neighbouring_role
+    gateway.role_states[neighbouring_role] = ci_postgresql.EXPECTED_ROLE_STATE
+    gateway.database_owners[neighbouring_database] = neighbouring_role
+
+    ci_postgresql.cleanup(valid_environment(), gateway_factory=lambda *_: gateway)
+
+    assert neighbouring_role in gateway.role_states
+    assert neighbouring_database in gateway.database_owners
+    assert ('drop_database', neighbouring_database) not in gateway.events
+    assert ('drop_role', neighbouring_role) not in gateway.events
+
+
+@pytest.mark.parametrize('unsafe_state', ['owner', 'flags'])
 def test_cleanup_refuses_unsafe_state_without_mutation(
     ci_postgresql,
     unsafe_state,
@@ -273,9 +330,8 @@ def test_cleanup_refuses_unsafe_state_without_mutation(
             createrole=False,
             replication=False,
             can_login=True,
+            bypass_rls=False,
         )
-    else:
-        gateway.tables[contract.base_database] = ('unexpected_table',)
 
     with pytest.raises(ci_postgresql.ContractError):
         ci_postgresql.cleanup(valid_environment(), gateway_factory=lambda *_: gateway)
@@ -283,6 +339,28 @@ def test_cleanup_refuses_unsafe_state_without_mutation(
     assert not any(
         event[0] in {'drop_database', 'drop_role'} for event in gateway.events
     )
+    assert gateway.events[-1] == ('close',)
+
+
+@pytest.mark.parametrize('dirty_resource', ['test_database', 'base_schema'])
+def test_success_path_cleanup_removes_exact_resources_then_reports_django_leak(
+    ci_postgresql,
+    dirty_resource,
+):
+    gateway = FakeGateway(ci_postgresql, include_resources=True)
+    contract, _ = ci_postgresql.configuration_from_environment(valid_environment())
+    if dirty_resource == 'test_database':
+        gateway.database_owners[contract.test_database] = contract.role
+    else:
+        gateway.tables[contract.base_database] = ('unexpected_table',)
+    environment = valid_environment()
+    environment['CI_POSTGRES_EXPECT_DJANGO_CLEANUP'] = 'true'
+
+    with pytest.raises(ci_postgresql.ContractError):
+        ci_postgresql.cleanup(environment, gateway_factory=lambda *_: gateway)
+
+    assert ('drop_database', contract.base_database) in gateway.events
+    assert ('drop_role', contract.role) in gateway.events
     assert gateway.events[-1] == ('close',)
 
 
