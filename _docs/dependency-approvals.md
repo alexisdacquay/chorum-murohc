@@ -16,7 +16,7 @@ blanket installation approval.
 | DA-02 | T003 | One Python formatter and linter | Approved |
 | DA-03 | T005 | PostgreSQL driver | Approved |
 | DA-04 | T010 | Django REST Framework | Pending exact proposal and approval |
-| DA-05 | T011 | React, TypeScript, Vite, Vitest, and Testing Library foundation | Pending exact proposal and approval |
+| DA-05 | T011 | React, TypeScript, Vite, Vitest, and Testing Library foundation | Approved |
 | DA-06 | T012 | Tailwind CSS | Pending exact proposal and approval |
 | DA-07 | T013 | shadcn/ui and required Radix primitives | Pending exact proposal and approval |
 | DA-08 | T016 | TanStack Query | Pending exact proposal and approval |
@@ -56,6 +56,21 @@ blanket installation approval.
 - Approval date: 2026-09-06
 - Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/5#issuecomment-5555796197
 - Owning task: T005
+
+### DA-05 — Approved
+
+- Direct package(s):
+  - Runtime: `react`, `react-dom`
+  - Development: `typescript`, `vite`, `@vitejs/plugin-react`, `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/dom`, `@types/node`, `@types/react`, `@types/react-dom`
+- Ecosystem and manifest: frontend pnpm, `frontend/package.json` and generated `frontend/pnpm-lock.yaml`
+- Purpose: provide the minimal React, TypeScript, and Vite application plus the Vitest and Testing Library DOM smoke-test foundation
+- Permitted version range(s):
+  - Runtime: `react>=19.2.8,<20`, `react-dom>=19.2.8,<20`
+  - Development: `typescript>=6.0.2,<6.1`, `vite>=8.2.2,<9`, `@vitejs/plugin-react>=6.1.1,<7`, `vitest>=5,<6`, `jsdom>=30.0.1,<31`, `@testing-library/react>=16.3.3,<17`, `@testing-library/dom>=10.4.1,<11`, `@types/node>=24.13.3,<25`, `@types/react>=19.2.18,<20`, `@types/react-dom>=19.2.7,<20`
+- Approved by: alexisdacquay
+- Approval date: 2026-09-06
+- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/11#issuecomment-5560573600
+- Owning task: T011
 
 ## Approval record template
 
