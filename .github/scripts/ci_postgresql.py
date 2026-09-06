@@ -1,8 +1,10 @@
+import hashlib
 import os
 import re
 import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Protocol
 
 import psycopg
@@ -10,6 +12,15 @@ from psycopg import sql
 
 CI_TARGET_PATTERN = re.compile(r'ci_[0-9]{1,20}_[0-9]{1,3}_[a-z0-9]{8,16}')
 IDENTIFIER_PATTERN = re.compile(r'[a-z0-9_]{1,63}')
+BOOT_ID_PATTERN = re.compile(
+    r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+)
+DERIVED_CREDENTIAL_PATTERN = re.compile(r'[0-9a-f]{64}')
+RUN_ID_PATTERN = re.compile(r'[0-9]{1,20}')
+RUN_ATTEMPT_PATTERN = re.compile(r'[0-9]{1,3}')
+BOOT_ID_PATH = Path('/proc/sys/kernel/random/boot_id')
+EXPECTED_RUNNER_JOB = 'backend'
+EXPECTED_TARGET_JOB = 'backend01'
 EXPECTED_HOST = 'postgres'
 EXPECTED_PORT = '5432'
 EXPECTED_SERVER_VERSION = '17.11'
@@ -38,6 +49,7 @@ class Contract:
 
 @dataclass(frozen=True)
 class Credentials:
+    initial_password: str | None = field(repr=False)
     bootstrap_password: str | None = field(repr=False)
     restricted_password: str | None = field(repr=False)
 
@@ -63,6 +75,8 @@ EXPECTED_ROLE_STATE = RoleState(
 
 
 class Gateway(Protocol):
+    def rotate_bootstrap(self, password): ...
+
     def server_identity(self): ...
 
     def role_state(self, name): ...
@@ -99,12 +113,7 @@ def _require_exact(environment, variable, expected):
     return value
 
 
-def configuration_from_environment(
-    environment: Mapping[str, str],
-    *,
-    require_bootstrap_password=True,
-    require_restricted_password=True,
-):
+def contract_from_environment(environment: Mapping[str, str]):
     target = _required(environment, 'CI_POSTGRES_TARGET')
     if CI_TARGET_PATTERN.fullmatch(target) is None:
         raise ContractError('CI_POSTGRES_TARGET does not match the CI contract.')
@@ -146,15 +155,44 @@ def configuration_from_environment(
     _require_exact(environment, 'DJANGO_DB_HOST', host)
     _require_exact(environment, 'DJANGO_DB_PORT', port)
 
-    bootstrap_password = (
-        _required(environment, 'CI_POSTGRES_BOOTSTRAP_PASSWORD')
-        if require_bootstrap_password
-        else None
+    return Contract(
+        target=target,
+        host=host,
+        port=port,
+        expected_server_version=expected_server_version,
+        bootstrap_role=bootstrap_role,
+        bootstrap_database=bootstrap_database,
+        base_database=base_database,
+        test_database=test_database,
+        role=role,
     )
-    restricted_password = (
-        _required(environment, 'DJANGO_DB_PASSWORD')
-        if require_restricted_password
-        else None
+
+
+def _derived_credential_from_environment(environment, variable, *, required):
+    if not required:
+        return None
+    value = _required(environment, variable)
+    if DERIVED_CREDENTIAL_PATTERN.fullmatch(value) is None:
+        raise ContractError(f'{variable} does not match the CI contract.')
+    return value
+
+
+def configuration_from_environment(
+    environment: Mapping[str, str],
+    *,
+    require_bootstrap_password=True,
+    require_restricted_password=True,
+):
+    contract = contract_from_environment(environment)
+    bootstrap_password = _derived_credential_from_environment(
+        environment,
+        'CI_POSTGRES_BOOTSTRAP_PASSWORD',
+        required=require_bootstrap_password,
+    )
+    restricted_password = _derived_credential_from_environment(
+        environment,
+        'DJANGO_DB_PASSWORD',
+        required=require_restricted_password,
     )
     if (
         bootstrap_password is not None
@@ -164,21 +202,95 @@ def configuration_from_environment(
         raise ContractError('The two synthetic CI credentials must differ.')
 
     return (
-        Contract(
-            target=target,
-            host=host,
-            port=port,
-            expected_server_version=expected_server_version,
-            bootstrap_role=bootstrap_role,
-            bootstrap_database=bootstrap_database,
-            base_database=base_database,
-            test_database=test_database,
-            role=role,
-        ),
+        contract,
         Credentials(
+            initial_password=None,
             bootstrap_password=bootstrap_password,
             restricted_password=restricted_password,
         ),
+    )
+
+
+def _read_boot_id():
+    try:
+        raw_value = BOOT_ID_PATH.read_text(encoding='utf-8')
+    except (OSError, UnicodeError) as error:
+        raise ContractError('The CI bootstrap seed could not be read.') from error
+
+    value = raw_value.removesuffix('\n')
+    if raw_value != f'{value}\n' or BOOT_ID_PATTERN.fullmatch(value) is None:
+        raise ContractError('The CI bootstrap seed does not match the contract.')
+    return value
+
+
+def _runner_context(environment, contract):
+    run_id = _required(environment, 'GITHUB_RUN_ID')
+    run_attempt = _required(environment, 'GITHUB_RUN_ATTEMPT')
+    job = _require_exact(environment, 'GITHUB_JOB', EXPECTED_RUNNER_JOB)
+    if RUN_ID_PATTERN.fullmatch(run_id) is None:
+        raise ContractError('GITHUB_RUN_ID does not match the CI contract.')
+    if RUN_ATTEMPT_PATTERN.fullmatch(run_attempt) is None:
+        raise ContractError('GITHUB_RUN_ATTEMPT does not match the CI contract.')
+    expected_target = f'ci_{run_id}_{run_attempt}_{EXPECTED_TARGET_JOB}'
+    if contract.target != expected_target:
+        raise ContractError('Runner identity does not match CI_POSTGRES_TARGET.')
+    return f't017:{run_id}:{run_attempt}:{job}'
+
+
+def _mask_value(value):
+    print(f'::add-mask::{value}', flush=True)
+
+
+def _write_runner_output(environment, name, value):
+    output_path = _required(environment, 'GITHUB_OUTPUT')
+    try:
+        with Path(output_path).open('a', encoding='utf-8') as output_file:
+            output_file.write(f'{name}={value}\n')
+    except OSError as error:
+        raise ContractError(
+            'A masked CI credential could not be transferred.'
+        ) from error
+
+
+def initialise_credentials(
+    environment: Mapping[str, str],
+    contract: Contract,
+    *,
+    boot_id_reader=_read_boot_id,
+    mask_writer=_mask_value,
+    output_writer=None,
+):
+    boot_id = boot_id_reader()
+    if BOOT_ID_PATTERN.fullmatch(boot_id) is None:
+        raise ContractError('The CI bootstrap seed does not match the contract.')
+    context = _runner_context(environment, contract)
+
+    mask_writer(boot_id)
+    bootstrap_password = hashlib.sha256(
+        f'{context}:bootstrap:{boot_id}'.encode()
+    ).hexdigest()
+    restricted_password = hashlib.sha256(
+        f'{context}:restricted:{boot_id}'.encode()
+    ).hexdigest()
+    if bootstrap_password == restricted_password:
+        raise ContractError('The derived CI credentials must differ.')
+
+    mask_writer(bootstrap_password)
+    mask_writer(restricted_password)
+
+    if output_writer is None:
+        output_writer = lambda name, value: _write_runner_output(
+            environment,
+            name,
+            value,
+        )
+    output_writer('rotated_bootstrap', bootstrap_password)
+    output_writer('restricted', restricted_password)
+
+    return Credentials(
+        initial_password=boot_id,
+        bootstrap_password=bootstrap_password,
+        restricted_password=restricted_password,
     )
 
 
@@ -190,7 +302,10 @@ def _identifier(name):
 
 class PsycopgGateway:
     def __init__(self, contract, credentials, connector=psycopg.connect):
-        if credentials.bootstrap_password is None:
+        connection_password = (
+            credentials.initial_password or credentials.bootstrap_password
+        )
+        if connection_password is None:
             raise ContractError('The bootstrap credential is required for connection.')
         self.contract = contract
         self.credentials = credentials
@@ -200,7 +315,7 @@ class PsycopgGateway:
             port=contract.port,
             dbname=contract.bootstrap_database,
             user=contract.bootstrap_role,
-            password=credentials.bootstrap_password,
+            password=connection_password,
             autocommit=True,
             connect_timeout=10,
         )
@@ -209,6 +324,15 @@ class PsycopgGateway:
         with self.admin_connection.cursor() as cursor:
             cursor.execute(query, parameters)
             return cursor.fetchone()
+
+    def rotate_bootstrap(self, password):
+        if password is None:
+            raise ContractError('The rotated bootstrap credential is required.')
+        query = sql.SQL('ALTER ROLE {} WITH PASSWORD %s').format(
+            _identifier(self.contract.bootstrap_role)
+        )
+        with psycopg.ClientCursor(self.admin_connection) as cursor:
+            cursor.execute(query, (password,))
 
     def server_identity(self):
         row = self._fetchone(
@@ -250,6 +374,8 @@ class PsycopgGateway:
         return None if row is None else row[0]
 
     def public_tables(self, database):
+        if self.credentials.bootstrap_password is None:
+            raise ContractError('The rotated bootstrap credential is required.')
         connection = self.connector(
             host=self.contract.host,
             port=self.contract.port,
@@ -363,11 +489,14 @@ def prepare(
     environment: Mapping[str, str],
     *,
     gateway_factory: GatewayFactory = _default_gateway,
+    credential_initializer=initialise_credentials,
 ):
-    contract, credentials = configuration_from_environment(environment)
+    contract = contract_from_environment(environment)
+    credentials = credential_initializer(environment, contract)
     gateway = gateway_factory(contract, credentials)
     try:
         server_version = _validate_server(gateway, contract)
+        gateway.rotate_bootstrap(credentials.bootstrap_password)
         if gateway.role_state(contract.role) is not None:
             raise ContractError('The derived restricted role already exists.')
         if gateway.database_owner(contract.base_database) is not None:
@@ -382,7 +511,8 @@ def prepare(
             'prepare',
             contract,
             server_version,
-            'base_public_schema=empty; test_database_state=absent',
+            'bootstrap_rotation=complete; base_public_schema=empty; '
+            'test_database_state=absent',
         )
     finally:
         gateway.close()

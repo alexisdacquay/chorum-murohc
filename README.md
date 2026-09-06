@@ -131,6 +131,17 @@ recorded run-labelled container. CI makes the same checks and uses an
 database, and restricted role after a later failure. Abrupt cancellation is
 contained by GitHub's transient job-container teardown.
 
+CI initialises the service through the fixed, non-secret password-file path
+`/proc/sys/kernel/random/boot_id`; Runner service metadata may show that path,
+but not its content. At the start of PostgreSQL prepare, the helper validates
+the path content and exact Runner identity, masks the content, derives and masks
+separate domain-labelled SHA-256 values, then transfers only the two derived
+values. It connects once with the in-memory initial value, verifies the server,
+and immediately rotates the bootstrap role before creating the restricted
+role. Django receives only the restricted value, while guarded cleanup receives
+only the rotated bootstrap value. The initial content never crosses a step
+boundary, and none of the three values is written to documentation or logs.
+
 The local commands matching `Frontend` are:
 
 ```shell

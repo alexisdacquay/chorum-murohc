@@ -34,7 +34,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_DB: postgres
-          POSTGRES_PASSWORD: t017-bootstrap-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job || 'backend' }}-synthetic
+          POSTGRES_PASSWORD_FILE: /proc/sys/kernel/random/boot_id
         options: >-
           --health-cmd "pg_isready --host=127.0.0.1 --port=5432 --username=postgres --dbname=postgres"
           --health-interval 5s
@@ -86,31 +86,29 @@ jobs:
         run: uv run --locked ruff check .
 
       - name: Prepare isolated PostgreSQL
+        id: postgres_credentials
         run: uv run --locked python .github/scripts/ci_postgresql.py prepare
-        env:
-          CI_POSTGRES_BOOTSTRAP_PASSWORD: t017-bootstrap-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job || 'backend' }}-synthetic
-          DJANGO_DB_PASSWORD: t017-restricted-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-synthetic
 
       - name: Run Django system checks
         run: uv run --locked python manage.py check
         env:
-          DJANGO_DB_PASSWORD: t017-restricted-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-synthetic
+          DJANGO_DB_PASSWORD: ${{ steps.postgres_credentials.outputs.restricted }}
 
       - name: Check migration drift
         run: uv run --locked python manage.py makemigrations --check --dry-run
         env:
-          DJANGO_DB_PASSWORD: t017-restricted-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-synthetic
+          DJANGO_DB_PASSWORD: ${{ steps.postgres_credentials.outputs.restricted }}
 
       - name: Run backend tests
         run: uv run --locked pytest
         env:
-          DJANGO_DB_PASSWORD: t017-restricted-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-synthetic
+          DJANGO_DB_PASSWORD: ${{ steps.postgres_credentials.outputs.restricted }}
 
       - name: Clean isolated PostgreSQL resources
         if: ${{ always() }}
         run: uv run --locked python .github/scripts/ci_postgresql.py cleanup
         env:
-          CI_POSTGRES_BOOTSTRAP_PASSWORD: t017-bootstrap-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job || 'backend' }}-synthetic
+          CI_POSTGRES_BOOTSTRAP_PASSWORD: ${{ steps.postgres_credentials.outputs.rotated_bootstrap }}
           CI_POSTGRES_EXPECT_DJANGO_CLEANUP: ${{ job.status == 'success' }}
 
   frontend:

@@ -162,8 +162,14 @@ def test_backend_uses_the_guarded_service_and_exact_command_sequence():
     )
     service = indented_block(backend, '    services:')
     assert f'        image: {POSTGRES_IMAGE}' in service
-    assert 'POSTGRES_USER: postgres' in service
-    assert 'POSTGRES_DB: postgres' in service
+    assert (
+        indented_block(service, '        env:')
+        == """        env:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_PASSWORD_FILE: /proc/sys/kernel/random/boot_id"""
+    )
+    assert not re.search(r'^\s+POSTGRES_PASSWORD:', service, flags=re.MULTILINE)
     assert '--health-cmd' in service
     assert '--health-interval' in service
     assert '--health-timeout' in service
@@ -198,34 +204,58 @@ def test_backend_uses_the_guarded_service_and_exact_command_sequence():
     )
 
 
-def test_credentials_are_scoped_only_to_the_required_backend_steps():
+def test_masked_credentials_are_scoped_only_after_prepare():
     backend = job_block(workflow_text(), 'backend')
     steps = step_blocks(backend)
-    bootstrap_value = (
-        't017-bootstrap-${{ github.run_id }}-${{ github.run_attempt }}-'
-        "${{ github.job || 'backend' }}-synthetic"
+    prepare_step = next(
+        step for step in steps if step.startswith('      - name: Prepare isolated')
     )
     bootstrap_steps = [
         step for step in steps if 'CI_POSTGRES_BOOTSTRAP_PASSWORD:' in step
     ]
     restricted_steps = [step for step in steps if 'DJANGO_DB_PASSWORD:' in step]
 
-    assert len(bootstrap_steps) == 2
-    assert backend.count(bootstrap_value) == 3
-    assert f'POSTGRES_PASSWORD: {bootstrap_value}' in backend
-    assert bootstrap_steps[0].startswith('      - name: Prepare isolated PostgreSQL')
-    assert bootstrap_steps[1].startswith(
+    assert 'id: postgres_credentials' in prepare_step
+    assert 'env:' not in prepare_step
+    assert len(bootstrap_steps) == 1
+    assert bootstrap_steps[0].startswith(
         '      - name: Clean isolated PostgreSQL resources'
     )
-    assert len(restricted_steps) == 4
-    assert restricted_steps[0].startswith('      - name: Prepare isolated PostgreSQL')
-    assert [step.splitlines()[0] for step in restricted_steps[1:]] == [
+    assert (
+        'CI_POSTGRES_BOOTSTRAP_PASSWORD: '
+        '${{ steps.postgres_credentials.outputs.rotated_bootstrap }}'
+        in bootstrap_steps[0]
+    )
+    assert len(restricted_steps) == 3
+    assert [step.splitlines()[0] for step in restricted_steps] == [
         '      - name: Run Django system checks',
         '      - name: Check migration drift',
         '      - name: Run backend tests',
     ]
-    for step in restricted_steps[1:]:
+    for step in restricted_steps:
+        assert (
+            'DJANGO_DB_PASSWORD: '
+            '${{ steps.postgres_credentials.outputs.restricted }}' in step
+        )
         assert 'CI_POSTGRES_BOOTSTRAP_PASSWORD:' not in step
+
+    prepare_index = steps.index(prepare_step)
+    assert all(steps.index(step) > prepare_index for step in restricted_steps)
+    assert steps.index(bootstrap_steps[0]) > prepare_index
+
+
+def test_workflow_contains_no_yaml_credential_or_token_source():
+    text = workflow_text()
+
+    assert text.count('POSTGRES_PASSWORD_FILE: /proc/sys/kernel/random/boot_id') == 1
+    assert not re.search(r'^\s+POSTGRES_PASSWORD:', text, flags=re.MULTILINE)
+    assert '${{ secrets.' not in text
+    assert 'github.token' not in text
+    assert 'GITHUB_ENV' not in text
+    assert '.outputs.seed' not in text
+    assert '.outputs.boot_id' not in text
+    assert 't017-bootstrap-' not in text
+    assert 't017-restricted-' not in text
 
 
 def test_frontend_setup_disables_install_and_store_cache_then_runs_exact_commands():
