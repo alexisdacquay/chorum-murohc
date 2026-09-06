@@ -14,7 +14,7 @@ blanket installation approval.
 | --- | --- | --- | --- |
 | DA-01 | T001 | `pytest` and `pytest-django` baseline | Approved |
 | DA-02 | T003 | One Python formatter and linter | Approved |
-| DA-03 | T005 | PostgreSQL driver | Pending exact proposal and approval |
+| DA-03 | T005 | PostgreSQL driver | Approved |
 | DA-04 | T010 | Django REST Framework | Pending exact proposal and approval |
 | DA-05 | T011 | React, TypeScript, Vite, Vitest, and Testing Library foundation | Pending exact proposal and approval |
 | DA-06 | T012 | Tailwind CSS | Pending exact proposal and approval |
@@ -45,6 +45,17 @@ blanket installation approval.
 - Approval date: 2026-09-06
 - Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/3#issuecomment-5555495792
 - Owning task: T003
+
+### DA-03 — Approved
+
+- Direct package(s): `psycopg[binary]`
+- Ecosystem and manifest: Python runtime dependency in `pyproject.toml` and generated `uv.lock`
+- Purpose: provide Django's PostgreSQL driver for local and CI verification
+- Permitted version range(s): `psycopg[binary]>=3.3.5,<3.4.0`
+- Approved by: alexisdacquay
+- Approval date: 2026-09-06
+- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/5#issuecomment-5555796197
+- Owning task: T005
 
 ## Approval record template
 
