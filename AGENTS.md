@@ -5,6 +5,9 @@ Commands
 - `uv run --locked pytest chorum_murohc/tests.py` - the baseline test file after T001
 - `uv run --locked ruff format --check .` - verify Python formatting
 - `uv run --locked ruff check .` - verify Python linting
+- `pnpm --dir frontend install --frozen-lockfile` - install exactly the locked frontend dependencies
+- `pnpm --dir frontend test` - run the whole frontend suite
+- `pnpm --dir frontend build` - type-check and build the frontend
 
 Documents
 
