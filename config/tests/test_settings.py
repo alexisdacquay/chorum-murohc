@@ -344,6 +344,25 @@ def test_sqlite_relative_name_resolves_beneath_project_root():
     assert result['database_name_is_path'] is True
 
 
+def test_sqlite_relative_name_normalises_contained_parent_segments():
+    result = settings_probe({'DJANGO_DB_NAME': 'var/../alternate.sqlite3'})
+
+    assert result['status'] == 'ok'
+    assert result['database_name'] == str(PROJECT_ROOT / 'alternate.sqlite3')
+    assert result['database_name_is_path'] is True
+
+
+@pytest.mark.parametrize(
+    'database_name',
+    ['../outside.sqlite3', 'nested/../../outside.sqlite3'],
+)
+def test_sqlite_rejects_relative_names_that_escape_project_root(database_name):
+    assert_configuration_error(
+        {'DJANGO_DB_NAME': database_name},
+        'DJANGO_DB_NAME is invalid.',
+    )
+
+
 def test_sqlite_absolute_name_remains_absolute():
     database_name = '/tmp/chorum-murohc-test.sqlite3'
 
@@ -446,6 +465,13 @@ def test_postgresql_rejects_out_of_range_and_non_decimal_ports(port_value):
     assert_configuration_error(environment, 'DJANGO_DB_PORT is invalid.')
 
 
+def test_postgresql_rejects_oversized_decimal_port_with_controlled_error():
+    environment = production_environment()
+    environment['DJANGO_DB_PORT'] = '9' * 5000
+
+    assert_configuration_error(environment, 'DJANGO_DB_PORT is invalid.')
+
+
 @pytest.mark.parametrize(
     ('port_value', 'normalised_port'),
     [('1', '1'), ('0005432', '5432'), ('65535', '65535')],
@@ -458,6 +484,16 @@ def test_postgresql_normalises_valid_ports(port_value, normalised_port):
 
     assert result['status'] == 'ok'
     assert result['database_port'] == normalised_port
+
+
+def test_postgresql_normalises_many_leading_zeroes_without_integer_conversion():
+    environment = production_environment()
+    environment['DJANGO_DB_PORT'] = ('0' * 5000) + '5432'
+
+    result = settings_probe(environment)
+
+    assert result['status'] == 'ok'
+    assert result['database_port'] == '5432'
 
 
 def test_production_rejects_explicit_sqlite_engine():

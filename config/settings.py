@@ -163,11 +163,12 @@ if database_engine == 'sqlite':
         database_name = database_name_value
     else:
         database_name_path = Path(database_name_value)
-        database_name = (
-            database_name_path
-            if database_name_path.is_absolute()
-            else BASE_DIR / database_name_path
-        )
+        if database_name_path.is_absolute():
+            database_name = database_name_path
+        else:
+            database_name = (BASE_DIR / database_name_path).resolve()
+            if not database_name.is_relative_to(BASE_DIR):
+                _invalid('DJANGO_DB_NAME')
 
     DATABASES = {
         'default': {
@@ -193,8 +194,12 @@ else:
     database_port_value = database_values['DJANGO_DB_PORT']
     if not database_port_value.isascii() or not database_port_value.isdecimal():
         _invalid('DJANGO_DB_PORT')
-    database_port = int(database_port_value, 10)
-    if not 1 <= database_port <= 65535:
+    database_port = database_port_value.lstrip('0') or '0'
+    if (
+        database_port == '0'
+        or len(database_port) > 5
+        or (len(database_port) == 5 and database_port > '65535')
+    ):
         _invalid('DJANGO_DB_PORT')
 
     DATABASES = {
@@ -204,7 +209,7 @@ else:
             'USER': database_values['DJANGO_DB_USER'],
             'PASSWORD': database_values['DJANGO_DB_PASSWORD'],
             'HOST': database_values['DJANGO_DB_HOST'],
-            'PORT': str(database_port),
+            'PORT': database_port,
         }
     }
 
