@@ -8,7 +8,8 @@ points help creatures evolve over time. Points can also be exchanged for
 agreed household rewards.
 
 > **Project status:** Early development. The Django project and initial
-> `chorum-murohc` app have been created; product features are not yet implemented.
+> `chorum-murohc` app and the minimal React frontend foundation have been created;
+> product features are not yet implemented.
 
 ## Planned features
 
@@ -44,6 +45,8 @@ agreed household rewards.
 
 - Python 3.13 or later
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Node.js 24.15.0
+- pnpm 11.19.0
 
 ### Default SQLite setup
 
@@ -63,6 +66,29 @@ uv run --locked python manage.py runserver
 
 Then open <http://127.0.0.1:8000/>.
 
+### Frontend
+
+Install the exact dependencies recorded in the frontend lockfile:
+
+```shell
+pnpm --dir frontend install --frozen-lockfile
+```
+
+Start the Vite development server:
+
+```shell
+pnpm --dir frontend dev
+```
+
+Then open <http://localhost:5173/>.
+
+Run the component tests and create a type-checked production build:
+
+```shell
+pnpm --dir frontend test
+pnpm --dir frontend build
+```
+
 ### Checks and tests
 
 ```shell
@@ -76,6 +102,7 @@ uv run --locked pytest
 
 - `config/` — project-wide Django settings and URL routing
 - `chorum_murohc/` — the main Chorum-murohc Django app
+- `frontend/` — React and TypeScript browser application
 - `_docs/plan.md` — current product plan and requirements
 - `manage.py` — command-line entry point for Django tasks
 
