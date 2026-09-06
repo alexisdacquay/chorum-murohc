@@ -97,6 +97,8 @@ INSTALLED_APPS = [
     'chorum_murohc.creatures.apps.CreaturesConfig',
 ]
 
+AUTH_USER_MODEL = 'identity.User'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
