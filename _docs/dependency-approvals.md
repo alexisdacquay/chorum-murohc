@@ -18,7 +18,7 @@ blanket installation approval.
 | DA-04 | T010 | Django REST Framework | Approved |
 | DA-05 | T011 | React, TypeScript, Vite, Vitest, and Testing Library foundation | Approved |
 | DA-06 | T012 | Tailwind CSS | Approved |
-| DA-07 | T013 | shadcn/ui and required Radix primitives | Pending exact proposal and approval |
+| DA-07 | T013 | Local component foundation and required Radix primitives | Approved |
 | DA-08 | T016 | TanStack Query | Pending exact proposal and approval |
 | DA-09 | T028 | React Hook Form and Zod | Pending exact proposal and approval |
 | DA-10 | T083 | Motion, only if CSS is demonstrably insufficient | Conditional; pending exact proposal and approval |
@@ -94,6 +94,18 @@ blanket installation approval.
 - Approval date: 2026-09-07
 - Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/12#issuecomment-5576277632
 - Owning task: T012
+
+### DA-07 — Approved
+
+- Direct package(s): `@radix-ui/react-dialog`, `@radix-ui/react-slot`, `class-variance-authority`, `clsx`, `tailwind-merge`
+- Ecosystem and manifest: frontend pnpm runtime dependencies in `frontend/package.json` and generated `frontend/pnpm-lock.yaml`
+- Purpose: provide the issue-defined accessible Dialog primitive, Slot composition, variant contracts, and deterministic class composition for the first local component foundation
+- Permitted version range(s): `@radix-ui/react-dialog>=1.1.23 <1.2.0`, `@radix-ui/react-slot>=1.3.3 <1.4.0`, `class-variance-authority>=0.7.1 <0.8.0`, `clsx>=2.1.1 <3.0.0`, `tailwind-merge>=3.6.0 <4.0.0`
+- Excluded packages: shadcn CLI/package, aggregate `radix-ui`, lucide, animation, PostCSS, form, data, motion, Playwright and test packages, remote generators, and any sixth primitive
+- Approved by: alexisdacquay
+- Approval date: 2026-09-08
+- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/13#issuecomment-5576815474
+- Owning task: T013
 
 ## Approval record template
 
