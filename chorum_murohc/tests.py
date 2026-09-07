@@ -10,7 +10,7 @@ from django.test import SimpleTestCase
 PRODUCT_PACKAGE = Path(__file__).resolve().parent
 ROOT_PACKAGE = 'chorum_murohc'
 ROOT_PACKAGE_MODULES = frozenset(
-    {'__init__', 'admin', 'apps', 'migrations', 'models', 'views'}
+    {'__init__', 'admin', 'api', 'apps', 'migrations', 'models', 'views'}
 )
 
 APP_CONFIGS = {
@@ -203,6 +203,20 @@ class ProductImportBoundaryTests(SimpleTestCase):
             _disallowed_imports('audit', imported_packages),
             {'chorum_murohc'},
         )
+
+    def test_scanner_classifies_api_and_submodules_as_root_boundary(self):
+        for source in (
+            'from chorum_murohc import api',
+            'from chorum_murohc.api.views import health',
+        ):
+            with self.subTest(source=source):
+                imported_packages = self._scan_source('api', source)
+
+                self.assertEqual(imported_packages, {ROOT_PACKAGE})
+                self.assertEqual(
+                    _disallowed_imports(ROOT_PACKAGE, imported_packages),
+                    set(),
+                )
 
     def test_scanner_keeps_every_approved_import_allowed(self):
         for source_domain, allowed_imports in ALLOWED_DOMAIN_IMPORTS.items():
