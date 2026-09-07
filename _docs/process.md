@@ -75,8 +75,8 @@ exception expires.
 
 ## Branch and worktree isolation
 
-- Use a dedicated worktree and branch for every issue. Codex branches use
-  `codex/<task-id>-<short-slug>`.
+- Use a dedicated worktree and branch for every issue. Feature branches use
+  `feature/<task-id>-<short-slug>`.
 - The orchestrator creates or removes worktrees serially. Before writing, the
   worker verifies and records the repository path, worktree path, branch, base
   commit, and clean working-tree status.
