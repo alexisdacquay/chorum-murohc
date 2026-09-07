@@ -17,7 +17,7 @@ blanket installation approval.
 | DA-03 | T005 | PostgreSQL driver | Approved |
 | DA-04 | T010 | Django REST Framework | Approved |
 | DA-05 | T011 | React, TypeScript, Vite, Vitest, and Testing Library foundation | Approved |
-| DA-06 | T012 | Tailwind CSS | Pending exact proposal and approval |
+| DA-06 | T012 | Tailwind CSS | Approved |
 | DA-07 | T013 | shadcn/ui and required Radix primitives | Pending exact proposal and approval |
 | DA-08 | T016 | TanStack Query | Pending exact proposal and approval |
 | DA-09 | T028 | React Hook Form and Zod | Pending exact proposal and approval |
@@ -82,6 +82,18 @@ blanket installation approval.
 - Approval date: 2026-09-06
 - Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/11#issuecomment-5560573600
 - Owning task: T011
+
+### DA-06 — Approved
+
+- Direct package(s): `tailwindcss`, `@tailwindcss/vite`
+- Ecosystem and manifest: frontend pnpm development dependencies in `frontend/package.json` and generated `frontend/pnpm-lock.yaml`
+- Purpose: provide Tailwind CSS v4 semantic-token and utility generation with the first-party Vite integration
+- Permitted version range(s): `tailwindcss>=4.3.3 <4.4.0`, `@tailwindcss/vite>=4.3.3 <4.4.0`
+- Excluded packages: PostCSS adapter and runtime UI packages
+- Approved by: alexisdacquay
+- Approval date: 2026-09-07
+- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/12#issuecomment-5576277632
+- Owning task: T012
 
 ## Approval record template
 
