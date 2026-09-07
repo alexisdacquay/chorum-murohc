@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'chorum_murohc.apps.ChorumMurohcConfig',
     'chorum_murohc.identity.apps.IdentityConfig',
     'chorum_murohc.audit.apps.AuditConfig',
