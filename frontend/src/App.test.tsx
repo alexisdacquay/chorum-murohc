@@ -6,6 +6,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, test } from 'vitest'
 
 import App from './App'
+import { inlineFavicon } from '../vite.config'
 
 const readSource = (path: string) =>
   readFileSync(new URL(path, import.meta.url), 'utf8')
@@ -140,6 +141,16 @@ describe('visual-token reference page', () => {
 })
 
 describe('semantic token source', () => {
+  test('inlines a favicon in the generated entry document', () => {
+    expect(inlineFavicon()).toEqual([
+      {
+        tag: 'link',
+        attrs: { rel: 'icon', href: 'data:,' },
+        injectTo: 'head-prepend',
+      },
+    ])
+  })
+
   test('declares the exact approved token values once', () => {
     const tokens = parseThemeTokens(readSource('./styles.css'))
 
@@ -253,7 +264,9 @@ describe('semantic token source', () => {
     expect(appSource).not.toMatch(/#[0-9a-f]{3,8}|\b(?:rgb|hsl)a?\(/i)
     expect(viteSource.match(/from '@tailwindcss\/vite'/g)).toHaveLength(1)
     expect(viteSource.match(/tailwindcss\(\)/g)).toHaveLength(1)
-    expect(viteSource).toContain('plugins: [react(), tailwindcss()]')
+    expect(viteSource).toContain(
+      'plugins: [react(), tailwindcss(), inlineFaviconPlugin]',
+    )
     expect(viteSource).toContain("environment: 'jsdom'")
     expect(viteSource).toContain("setupFiles: './src/test/setup.ts'")
   })
