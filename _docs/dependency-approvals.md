@@ -15,7 +15,7 @@ blanket installation approval.
 | DA-01 | T001 | `pytest` and `pytest-django` baseline | Approved |
 | DA-02 | T003 | One Python formatter and linter | Approved |
 | DA-03 | T005 | PostgreSQL driver | Approved |
-| DA-04 | T010 | Django REST Framework | Pending exact proposal and approval |
+| DA-04 | T010 | Django REST Framework | Approved |
 | DA-05 | T011 | React, TypeScript, Vite, Vitest, and Testing Library foundation | Approved |
 | DA-06 | T012 | Tailwind CSS | Pending exact proposal and approval |
 | DA-07 | T013 | shadcn/ui and required Radix primitives | Pending exact proposal and approval |
@@ -56,6 +56,17 @@ blanket installation approval.
 - Approval date: 2026-09-06
 - Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/5#issuecomment-5555796197
 - Owning task: T005
+
+### DA-04 — Approved
+
+- Direct package(s): `djangorestframework`
+- Ecosystem and manifest: Python runtime dependency in `pyproject.toml` and generated `uv.lock`
+- Purpose: provide DRF-native request dispatch, JSON responses, method and Accept negotiation, and error behaviour for the versioned API foundation
+- Permitted version range(s): `djangorestframework>=3.18.1,<3.19.0`
+- Approved by: alexisdacquay
+- Approval date: 2026-09-07
+- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/10#issuecomment-5576002924
+- Owning task: T010
 
 ### DA-05 — Approved
 
