@@ -1,9 +1,9 @@
 import getpass
 import hashlib
 import json
-from concurrent.futures import ThreadPoolExecutor
+import os
 from io import StringIO
-from threading import Barrier
+from multiprocessing import get_context
 from unittest.mock import patch
 
 import pytest
@@ -652,29 +652,23 @@ def test_boundary_lengths_and_native_username_normalisation_are_preserved(
     assert created_household.name == household
 
 
-def _threaded_command(barrier, values):
+def _process_command(barrier, result_queue, values):
+    for key, value in zip(ENVIRONMENT_KEYS, values, strict=True):
+        os.environ[key] = value
     close_old_connections()
     stdout = StringIO()
     stderr = StringIO()
     try:
         barrier.wait(timeout=10)
-        with patch.dict(
-            'os.environ',
-            {
-                ENVIRONMENT_KEYS[0]: values[0],
-                ENVIRONMENT_KEYS[1]: values[1],
-                ENVIRONMENT_KEYS[2]: values[2],
-            },
-        ):
-            call_command(
-                'bootstrap_household',
-                '--no-input',
-                stdout=stdout,
-                stderr=stderr,
-            )
-        return 'success', stdout.getvalue(), stderr.getvalue()
+        call_command(
+            'bootstrap_household',
+            '--no-input',
+            stdout=stdout,
+            stderr=stderr,
+        )
+        result_queue.put(('success', stdout.getvalue(), stderr.getvalue()))
     except CommandError as error:
-        return 'error', str(error), stderr.getvalue()
+        result_queue.put(('error', str(error), stderr.getvalue()))
     finally:
         connections.close_all()
 
@@ -686,7 +680,9 @@ def test_postgresql_concurrent_bootstrap_is_serialized_without_partial_state(
 ):
     if connection.vendor != 'postgresql':
         pytest.skip('requires the guarded PostgreSQL target')
-    barrier = Barrier(2)
+    process_context = get_context('fork')
+    barrier = process_context.Barrier(2)
+    result_queue = process_context.Queue()
     first_values = (HOUSEHOLD_VALUE, USERNAME_VALUE, PASSWORD_VALUE)
     second_values = (
         (OTHER_HOUSEHOLD_VALUE, OTHER_USERNAME_VALUE, OTHER_PASSWORD_VALUE)
@@ -694,12 +690,20 @@ def test_postgresql_concurrent_bootstrap_is_serialized_without_partial_state(
         else first_values
     )
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        futures = [
-            executor.submit(_threaded_command, barrier, first_values),
-            executor.submit(_threaded_command, barrier, second_values),
-        ]
-        results = [future.result(timeout=20) for future in futures]
+    connections.close_all()
+    processes = [
+        process_context.Process(
+            target=_process_command,
+            args=(barrier, result_queue, values),
+        )
+        for values in (first_values, second_values)
+    ]
+    for process in processes:
+        process.start()
+    for process in processes:
+        process.join(timeout=20)
+    assert [process.exitcode for process in processes] == [0, 0]
+    results = [result_queue.get(timeout=5) for _ in processes]
 
     if different_inputs:
         assert sorted(result[0] for result in results) == ['error', 'success']
