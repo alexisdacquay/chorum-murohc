@@ -98,6 +98,63 @@ uv run --locked ruff check .
 uv run --locked pytest
 ```
 
+### Continuous integration and local parity
+
+The `CI` workflow reports two stable required checks: `Backend` and `Frontend`.
+Both run for every pull request targeting `main` and every push to `main`. A
+failed immutable install, check, test, build, database preflight, or guarded
+cleanup leaves its check failed.
+
+The backend check uses PostgreSQL, so a default SQLite run is useful locally but
+is **not** CI parity. For backend parity, first follow the approved fresh-container
+boundary under [Isolated PostgreSQL tests](#isolated-postgresql-tests): use a new
+container from the exact approved PostgreSQL 17.11 image, bind its selected port
+only to `127.0.0.1`, generate a unique `task_tNNN_<worker-token>` target, and
+inject separate test-only bootstrap and restricted-role values through the
+process environment. Do not put either value in a command argument or a file.
+After the preflight proves the exact target, derived names, owner, role flags,
+empty base schema, and absent test database, run the same commands as `Backend`:
+
+```shell
+uv sync --locked
+uv run --locked ruff format --check .
+uv run --locked ruff check .
+uv run --locked python manage.py check
+uv run --locked python manage.py makemigrations --check --dry-run
+uv run --locked pytest
+```
+
+On ordinary completion, prove that Django removed the exact derived test
+database and left the base `public` schema empty. Then stop and remove only the
+recorded run-labelled container. CI makes the same checks and uses an
+`always()` cleanup step to remove only its exact run-derived test database, base
+database, and restricted role after a later failure. Abrupt cancellation is
+contained by GitHub's transient job-container teardown.
+
+CI initialises the service through the fixed, non-secret password-file path
+`/proc/sys/kernel/random/boot_id`; Runner service metadata may show that path,
+but not its content. At the start of PostgreSQL prepare, the helper validates
+the path content and exact Runner identity, masks the content, derives and masks
+separate domain-labelled SHA-256 values, then transfers only the two derived
+values. It connects once with the in-memory initial value, verifies the server,
+and immediately rotates the bootstrap role before creating the restricted
+role. Django receives only the restricted value, while guarded cleanup receives
+only the rotated bootstrap value. The initial content never crosses a step
+boundary, and none of the three values is written to documentation or logs.
+
+The local commands matching `Frontend` are:
+
+```shell
+pnpm --dir frontend install --frozen-lockfile
+pnpm --dir frontend test
+pnpm --dir frontend build
+```
+
+CI disables uv caching and pnpm store, runtime, dependency-tree, test, and build
+caching. The pinned pnpm setup action still maintains its unavoidable,
+content-keyed lockfile-verification memo; that memo is an untrusted optimisation
+and never replaces the explicit frozen install above.
+
 ## Project structure
 
 - `config/` — project-wide Django settings and URL routing
