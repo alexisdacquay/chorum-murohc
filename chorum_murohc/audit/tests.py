@@ -7,7 +7,14 @@ from importlib import import_module
 import pytest
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, connection, migrations, models, transaction
+from django.db import (
+    DataError,
+    IntegrityError,
+    connection,
+    migrations,
+    models,
+    transaction,
+)
 from django.db.migrations.executor import MigrationExecutor
 from django.db.models.deletion import ProtectedError
 from django.utils import timezone
@@ -265,6 +272,19 @@ def test_every_exact_sensitive_key_is_redacted_without_traversing_its_value():
 
 
 @pytest.mark.django_db
+def test_full_clean_sanitises_before_json_validation_traverses_sensitive_values():
+    household = Household.objects.create(name='Pre-clean household')
+    unencodable_value = object()
+    event = AuditEvent(
+        **_event_kwargs(household, context={'client_secret': unencodable_value})
+    )
+
+    event.full_clean()
+
+    assert event.context == {'client_secret': '[REDACTED]'}
+
+
+@pytest.mark.django_db
 def test_one_initial_instance_save_uses_the_same_redaction_boundary():
     household = Household.objects.create(name='Initial-save household')
     submitted_context = {'nested': [{'session_key': 'synthetic-sensitive-marker-a'}]}
@@ -422,6 +442,22 @@ def test_every_supported_mutation_api_is_blocked_before_a_write(
     event.refresh_from_db()
     assert AuditEvent.objects.count() == 1
     assert AuditEvent.objects.values().get(pk=event.pk) == original
+
+
+@pytest.mark.django_db
+def test_a_fresh_instance_cannot_overwrite_an_existing_primary_key():
+    household = Household.objects.create(name='Primary-key household')
+    existing = AuditEvent.objects.create(**_event_kwargs(household))
+    replacement = AuditEvent(
+        id=existing.pk,
+        **_event_kwargs(household, action='replacement'),
+    )
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        replacement.save()
+
+    existing.refresh_from_db()
+    assert existing.action == 'account.updated'
 
 
 @pytest.mark.django_db
@@ -606,7 +642,7 @@ def test_postgresql_enforces_character_storage_limits(field_name, invalid_value)
         pytest.skip('requires the guarded PostgreSQL target')
     household = Household.objects.create(name='Storage-limit household')
 
-    with pytest.raises(IntegrityError), transaction.atomic():
+    with pytest.raises(DataError), transaction.atomic():
         AuditEvent.objects.create(
             **_event_kwargs(household, **{field_name: invalid_value})
         )

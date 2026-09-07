@@ -159,10 +159,15 @@ class AuditEvent(models.Model):
         super().clean()
         self.context = _copy_and_sanitise_context(self.context)
 
+    def full_clean(self, *args, **kwargs):
+        self.context = _copy_and_sanitise_context(self.context)
+        return super().full_clean(*args, **kwargs)
+
     def save(self, *args, **kwargs):
         if not self._state.adding:
             raise AuditEventImmutableError('Audit events cannot be updated.')
         self.context = _copy_and_sanitise_context(self.context)
+        kwargs['force_insert'] = True
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
