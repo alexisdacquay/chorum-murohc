@@ -16,8 +16,21 @@ const inlineFaviconPlugin: Plugin = {
   transformIndexHtml: inlineFavicon,
 }
 
+const apiProxy = {
+  '/api': {
+    changeOrigin: false,
+    target: 'http://127.0.0.1:8000',
+  },
+}
+
 export default defineConfig({
   plugins: [react(), tailwindcss(), inlineFaviconPlugin],
+  preview: {
+    proxy: apiProxy,
+  },
+  server: {
+    proxy: apiProxy,
+  },
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
