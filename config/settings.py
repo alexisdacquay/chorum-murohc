@@ -275,6 +275,69 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# Sessions and CSRF
+# https://docs.djangoproject.com/en/5.2/topics/http/sessions/
+#
+# Same-origin Django sessions are the only authentication mechanism, as
+# required by the `Session and CSRF Policy` section of `_docs/design.md`.
+# There is no JWT, bearer token, or browser-stored authentication token.
+
+# Fourteen days, with no idle timeout and no extension on activity.
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 14
+SESSION_SAVE_EVERY_REQUEST = False
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# Script must never read the session cookie. The interface does have to read
+# the CSRF cookie to echo its value back, so only the session cookie is
+# HttpOnly, and both cookies stay same-site.
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Development serves plain HTTP, so both cookies are Secure in production
+# only; marking them Secure in development would stop them being sent at all.
+SESSION_COOKIE_SECURE = is_production
+CSRF_COOKIE_SECURE = is_production
+
+
+# Caches
+# https://docs.djangoproject.com/en/5.2/topics/cache/
+#
+# The login throttle keeps its counters in a cache of its own, so clearing an
+# application cache can never reset the abuse control. Local memory means the
+# counters are per process; the shared backend a multi-process deployment
+# needs is tracked in issue 128.
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    },
+    'login_throttle': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'login-throttle',
+    },
+}
+
+
+# Django REST Framework
+
+REST_FRAMEWORK = {
+    # Login is the only throttled endpoint, so no default throttle class is
+    # registered here. Both scopes are keyed on the client address and never
+    # on the submitted username: keying on a name would let an attacker lock
+    # out a named account and would leak which accounts exist.
+    'DEFAULT_THROTTLE_RATES': {
+        'login_burst': '10/minute',
+        'login_sustained': '100/hour',
+    },
+    # Trust no forwarding header: the client address is the peer address
+    # alone, so a forged `X-Forwarded-For` cannot buy a fresh allowance.
+    # Raise this only for a known, counted reverse proxy in front of Django.
+    'NUM_PROXIES': 0,
+}
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
