@@ -62,6 +62,11 @@ describe('visual-token reference page', () => {
     const { container } = render(<App />)
 
     expect(container.querySelectorAll('main')).toHaveLength(1)
+    expect(screen.getAllByRole('banner')).toHaveLength(1)
+    expect(screen.queryByRole('navigation')).toBeNull()
+    expect(
+      screen.getByRole('link', { name: 'Skip to main content' }),
+    ).toBeDefined()
     expect(
       screen.getAllByRole('heading', {
         level: 1,
