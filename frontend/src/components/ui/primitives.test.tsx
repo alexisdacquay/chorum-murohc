@@ -140,6 +140,12 @@ describe('Input and FormMessage', () => {
         </FormMessage>
         <label htmlFor="disabled-input">Disabled example</label>
         <Input disabled id="disabled-input" />
+        <label htmlFor="secret-input">Password example</label>
+        <Input
+          autoComplete="current-password"
+          id="secret-input"
+          type="password"
+        />
         <FormMessage tone="help">Helpful guidance.</FormMessage>
         <FormMessage role="status" tone="success">
           Success: The value is ready.
@@ -159,6 +165,16 @@ describe('Input and FormMessage', () => {
     expect(screen.getByRole('status').textContent).toMatch(/^Success:/)
     expect(screen.getByText('Helpful guidance.').getAttribute('role')).toBeNull()
     expect(disabled).toHaveProperty('disabled', true)
+
+    // A password field is masked, so it is not a textbox and its value is
+    // never exposed as document text.
+    const secret = screen.getByLabelText('Password example')
+
+    expect(secret).toHaveProperty('type', 'password')
+    expect(secret.getAttribute('autocomplete')).toBe('current-password')
+    expect(screen.queryByRole('textbox', { name: 'Password example' })).toBeNull()
+    fireEvent.change(secret, { target: { value: 'test-only-password' } })
+    expect(document.body.textContent).not.toContain('test-only-password')
 
     fireEvent.change(input, { target: { value: 'Changed' } })
     expect(onChange).toHaveBeenCalledOnce()

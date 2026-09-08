@@ -4,7 +4,11 @@ import { cn } from '../../lib/utils'
 
 export interface InputProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
-  type?: 'text'
+  /**
+   * Only the two types a current screen needs. `password` keeps the value out
+   * of the rendered document; nothing here ever reveals it as text.
+   */
+  type?: 'text' | 'password'
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(

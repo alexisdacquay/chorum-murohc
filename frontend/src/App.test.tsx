@@ -2,22 +2,99 @@
 
 import { readFileSync } from 'node:fs'
 
-import { render, screen } from '@testing-library/react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import App from './App'
+import { createQueryClient } from './api/query-client'
+import { CONNECTION_MESSAGE } from './components/auth/sign-in-form'
 import { inlineFavicon } from '../vite.config'
+
+// Synthetic values only. Nothing here is a real account or a real token.
+const TEST_CSRF_TOKEN = 'test-csrf-token'
+const TEST_USERNAME = 'test-parent'
+const TEST_PASSWORD = 'test-only-password'
+
+const PARENT_LABELS = [
+  'Overview',
+  'Approvals',
+  'Chore pool',
+  'Household',
+  'Activity',
+]
+const CHILD_LABELS = ['Chores', 'Points', 'Rewards', 'Levels', 'Creature']
+
+const SIGNED_OUT = {
+  is_authenticated: false,
+  user: null,
+  household: null,
+  role: null,
+}
+const PARENT = {
+  is_authenticated: true,
+  user: { id: 7, username: TEST_USERNAME },
+  household: { id: 3, name: 'Test household' },
+  role: 'parent',
+}
+const CHILD = { ...PARENT, user: { id: 8, username: 'test-child' }, role: 'child' }
 
 let fetchSpy: ReturnType<typeof vi.fn>
 
+const jsonResponse = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    headers: { 'Content-Type': 'application/json' },
+    status,
+  })
+
+const clearCookies = () => {
+  for (const part of document.cookie.split(';')) {
+    const name = part.split('=')[0].trim()
+
+    if (name !== '') {
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+    }
+  }
+}
+
+const renderApp = () =>
+  render(
+    <QueryClientProvider client={createQueryClient()}>
+      <App />
+    </QueryClientProvider>,
+  )
+
+/** Ids are generated per render, so they are normalised before comparison. */
+const withoutGeneratedIds = (markup: string) =>
+  markup.replace(/(id|for|aria-describedby)="[^"]*"/g, '$1="generated"')
+
+const linkNames = () =>
+  screen
+    .queryAllByRole('navigation')
+    .flatMap((navigation) =>
+      within(navigation)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    )
+
+const signInForm = () =>
+  screen.getByRole('heading', { level: 1, name: 'Sign in' }).parentElement
+    ?.querySelector('form') as HTMLFormElement
+
+const sessionCalls = () =>
+  fetchSpy.mock.calls.filter((call) => call[0] === '/api/v1/auth/session/')
+
 beforeEach(() => {
   window.history.replaceState(null, '', '/')
+  clearCookies()
+  document.cookie = `csrftoken=${TEST_CSRF_TOKEN}`
   fetchSpy = vi.fn(() => new Promise<Response>(() => undefined))
   vi.stubGlobal('fetch', fetchSpy)
 })
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  clearCookies()
   window.history.replaceState(null, '', '/')
 })
 
@@ -70,66 +147,225 @@ const contrastRatio = (first: string, second: string) => {
   return (lighter + 0.05) / (darker + 0.05)
 }
 
-describe('the committed application', () => {
-  test('shows only the signed-out destination with no navigation', () => {
-    const { container } = render(<App />)
+describe('the current session on load', () => {
+  test('asks the session endpoint once, same-origin, and shows only loading', () => {
+    renderApp()
 
-    expect(window.location.pathname).toBe('/sign-in')
+    expect(fetchSpy).toHaveBeenCalledExactlyOnceWith('/api/v1/auth/session/', {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+      method: 'GET',
+      signal: expect.any(AbortSignal),
+    })
+    expect(screen.getByRole('status').textContent).toContain('Loading')
+    expect(screen.getByRole('main').getAttribute('aria-busy')).toBe('true')
     expect(screen.queryByRole('navigation')).toBeNull()
-    expect(screen.getAllByRole('banner')).toHaveLength(1)
-    expect(container.querySelectorAll('main')).toHaveLength(1)
-    expect(
-      screen.getByRole('link', { name: 'Skip to main content' }),
-    ).toBeDefined()
-    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
-      'Sign in',
-    )
-    expect(screen.getByRole('main').textContent).toBe(
-      'Sign inThis screen is not built yet.',
-    )
+    expect(screen.queryByRole('textbox')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull()
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull()
   })
 
-  test('exposes no parent or child affordance and makes no request', () => {
-    render(<App />)
+  test('lands a parent on the parent start path with the five parent items', async () => {
+    fetchSpy.mockResolvedValue(jsonResponse(PARENT))
+    renderApp()
 
-    for (const label of [
+    await waitFor(() => expect(linkNames()).toEqual(PARENT_LABELS))
+    expect(window.location.pathname).toBe('/overview')
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
       'Overview',
-      'Approvals',
-      'Chore pool',
-      'Household',
-      'Activity',
-      'Chores',
-      'Points',
-      'Rewards',
-      'Levels',
-      'Creature',
+    )
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeDefined()
+    expect(screen.queryByLabelText('Password')).toBeNull()
+  })
+
+  test('lands a child on the child start path with the five child items', async () => {
+    fetchSpy.mockResolvedValue(jsonResponse(CHILD))
+    renderApp()
+
+    await waitFor(() => expect(linkNames()).toEqual(CHILD_LABELS))
+    expect(window.location.pathname).toBe('/chores')
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Chores')
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeDefined()
+  })
+
+  test('rewrites an already-authenticated visitor away from the sign-in path', async () => {
+    window.history.replaceState(null, '', '/sign-in')
+    fetchSpy.mockResolvedValue(jsonResponse(PARENT))
+    renderApp()
+
+    await waitFor(() => expect(window.location.pathname).toBe('/overview'))
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Overview',
+    )
+    expect(screen.queryByLabelText('Username')).toBeNull()
+    expect(screen.queryByText('Page not found')).toBeNull()
+  })
+
+  test.each([
+    ['a signed-out body', SIGNED_OUT],
+    ['a malformed body', { is_authenticated: true }],
+    ['a null household', { ...PARENT, household: null }],
+    ['an unsupported role', { ...PARENT, role: 'supervisor-9000' }],
+  ])('shows the one sign-in screen for %s', async (_name, body) => {
+    fetchSpy.mockResolvedValue(jsonResponse(body))
+    renderApp()
+
+    await waitFor(() => expect(screen.getByLabelText('Username')).toBeDefined())
+    expect(window.location.pathname).toBe('/sign-in')
+    expect(screen.queryByRole('navigation')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull()
+    expect(document.body.textContent).not.toContain('supervisor-9000')
+    expect(document.body.textContent).not.toContain('Test household')
+    expect(document.body.textContent).not.toContain(TEST_USERNAME)
+  })
+
+  test('renders one identical form whether the session is refused or unreachable', async () => {
+    const forms: string[] = []
+
+    for (const body of [
+      SIGNED_OUT,
+      { is_authenticated: true },
+      { ...PARENT, household: null },
+      { ...PARENT, role: 'supervisor-9000' },
     ]) {
-      expect(screen.queryByText(label)).toBeNull()
+      fetchSpy.mockResolvedValue(jsonResponse(body))
+      const view = renderApp()
+
+      await waitFor(() => expect(screen.getByLabelText('Username')).toBeDefined())
+      forms.push(withoutGeneratedIds(signInForm().outerHTML))
+      view.unmount()
     }
-    expect(fetchSpy).not.toHaveBeenCalled()
-    expect(document.cookie).toBe('')
+
+    fetchSpy.mockRejectedValue(new Error('offline'))
+    renderApp()
+    await waitFor(() => expect(screen.getByLabelText('Username')).toBeDefined())
+    forms.push(withoutGeneratedIds(signInForm().outerHTML))
+
+    expect(new Set(forms).size).toBe(1)
+  })
+
+  test('offers one recoverable notice with a working retry, and no stuck spinner', async () => {
+    fetchSpy.mockRejectedValueOnce(new Error('offline'))
+    fetchSpy.mockResolvedValue(jsonResponse(PARENT))
+    renderApp()
+
+    await waitFor(() => expect(screen.getByLabelText('Username')).toBeDefined())
+    // The spinner is gone, and one recoverable notice took its place.
+    expect(screen.getByRole('status').textContent).toContain(CONNECTION_MESSAGE)
+    expect(screen.getByRole('status').textContent).not.toContain('Loading')
+    expect(screen.getByRole('main').getAttribute('aria-busy')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+
+    await waitFor(() => expect(linkNames()).toEqual(PARENT_LABELS))
+    expect(sessionCalls()).toHaveLength(2)
+    expect(window.location.pathname).toBe('/overview')
+  })
+})
+
+describe('the sign-in and sign-out journey', () => {
+  test('signs a parent in from the form and moves focus to main', async () => {
+    fetchSpy.mockImplementation(async (input: string) =>
+      input === '/api/v1/auth/login/'
+        ? jsonResponse(PARENT)
+        : jsonResponse(SIGNED_OUT),
+    )
+    renderApp()
+
+    await waitFor(() => expect(screen.getByLabelText('Username')).toBeDefined())
+    fireEvent.change(screen.getByLabelText('Username'), {
+      target: { value: TEST_USERNAME },
+    })
+    fireEvent.change(screen.getByLabelText('Password'), {
+      target: { value: TEST_PASSWORD },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    await waitFor(() => expect(linkNames()).toEqual(PARENT_LABELS))
+    expect(window.location.pathname).toBe('/overview')
+    expect(document.activeElement).toBe(screen.getByRole('main'))
+    // The login body became the session: one session read, one login post.
+    expect(fetchSpy.mock.calls.map((call) => call[0])).toEqual([
+      '/api/v1/auth/session/',
+      '/api/v1/auth/login/',
+    ])
+    expect(document.body.textContent).not.toContain(TEST_PASSWORD)
     expect(window.localStorage.length).toBe(0)
     expect(window.sessionStorage.length).toBe(0)
   })
 
-  test('hard-codes no identity, role, request, or browser-state read', () => {
+  test('signs a parent out again and removes the navigation', async () => {
+    fetchSpy.mockImplementation(async (input: string) =>
+      input === '/api/v1/auth/logout/'
+        ? new Response(null, { status: 204 })
+        : jsonResponse(PARENT),
+    )
+    renderApp()
+
+    await waitFor(() => expect(linkNames()).toEqual(PARENT_LABELS))
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+
+    await waitFor(() => expect(window.location.pathname).toBe('/sign-in'))
+    expect(screen.queryByRole('navigation')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull()
+    expect(screen.getByLabelText('Username')).toBeDefined()
+  })
+
+  test('treats an expired session on sign-out as an ordinary sign-out', async () => {
+    fetchSpy.mockImplementation(async (input: string) =>
+      input === '/api/v1/auth/logout/'
+        ? new Response(null, { status: 403 })
+        : jsonResponse(PARENT),
+    )
+    renderApp()
+
+    await waitFor(() => expect(linkNames()).toEqual(PARENT_LABELS))
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+
+    await waitFor(() => expect(window.location.pathname).toBe('/sign-in'))
+    expect(screen.queryByRole('alert')?.textContent ?? '').toBe('')
+    expect(screen.queryByRole('navigation')).toBeNull()
+  })
+
+  test('leaves a viewer where they were when sign-out cannot be reached', async () => {
+    fetchSpy.mockImplementation(async (input: string) => {
+      if (input === '/api/v1/auth/logout/') {
+        throw new Error('offline')
+      }
+      return jsonResponse(PARENT)
+    })
+    renderApp()
+
+    await waitFor(() => expect(linkNames()).toEqual(PARENT_LABELS))
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain(
+        'We could not sign you out',
+      ),
+    )
+    expect(window.location.pathname).toBe('/overview')
+    expect(linkNames()).toEqual(PARENT_LABELS)
+  })
+})
+
+describe('the composition root itself', () => {
+  test('derives no identity, role, or authority from the browser', () => {
     const appSource = readSource('./App.tsx')
 
     for (const forbidden of [
       /document\.cookie/,
       /localStorage/,
       /sessionStorage/,
-      /\bfetch\s*\(/,
-      /useQuery/,
       /['"]parent['"]/,
       /['"]child['"]/,
       /location\.search/,
       /URLSearchParams/,
+      /SIGNED_OUT_SESSION/,
     ]) {
       expect(appSource).not.toMatch(forbidden)
     }
-    expect(appSource).toContain('SIGNED_OUT_SESSION')
+    expect(appSource).toContain('sessionQueryKey')
   })
 })
 
@@ -241,6 +477,28 @@ describe('semantic token source', () => {
     expect(stylesheet).toMatch(
       /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?scroll-behavior:\s*auto[^}]*\}[\s\S]*?animation-duration:\s*0\.01ms !important;[\s\S]*?animation-iteration-count:\s*1 !important;[\s\S]*?transition-duration:\s*0\.01ms !important;/,
     )
+  })
+
+  test('gives the sign-in screen full-width, reachable, motion-free controls', () => {
+    const stylesheet = readSource('./styles.css')
+
+    expect(stylesheet).toMatch(
+      /\.auth-panel\s*\{[\s\S]*?max-inline-size:\s*calc\(var\(--spacing-12\) \* 10\);/,
+    )
+    expect(stylesheet).toMatch(
+      /\.auth-form\s*\{[\s\S]*?inline-size:\s*100%;\s*min-inline-size:\s*0;/,
+    )
+    expect(stylesheet).toMatch(
+      /\.auth-field\s*\{[\s\S]*?inline-size:\s*100%;\s*min-inline-size:\s*0;/,
+    )
+    expect(stylesheet).toMatch(
+      /\.ui-input\s*\{[\s\S]*?min-block-size:\s*var\(--spacing-12\);/,
+    )
+    expect(stylesheet).toMatch(
+      /\.shell-session-actions\s*\{[\s\S]*?min-inline-size:\s*0;/,
+    )
+    // No state on these screens is carried by motion, so nothing to reduce.
+    expect(stylesheet).not.toMatch(/@keyframes|animation-name|animation:/)
   })
 
   test('gives navigation links a reachable target and a non-colour current cue', () => {
