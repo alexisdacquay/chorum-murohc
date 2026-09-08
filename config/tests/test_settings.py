@@ -59,6 +59,20 @@ else:
             }.items()
         },
         'database_port': database.get('PORT'),
+        'session_cookie_age': settings.SESSION_COOKIE_AGE,
+        'session_save_every_request': settings.SESSION_SAVE_EVERY_REQUEST,
+        'session_expire_at_browser_close': settings.SESSION_EXPIRE_AT_BROWSER_CLOSE,
+        'session_cookie_httponly': settings.SESSION_COOKIE_HTTPONLY,
+        'session_cookie_samesite': settings.SESSION_COOKIE_SAMESITE,
+        'session_cookie_secure': settings.SESSION_COOKIE_SECURE,
+        'csrf_cookie_httponly': settings.CSRF_COOKIE_HTTPONLY,
+        'csrf_cookie_samesite': settings.CSRF_COOKIE_SAMESITE,
+        'csrf_cookie_secure': settings.CSRF_COOKIE_SECURE,
+        'cache_aliases': sorted(settings.CACHES),
+        'login_throttle_cache': settings.CACHES.get('login_throttle'),
+        'rest_framework_keys': sorted(settings.REST_FRAMEWORK),
+        'throttle_rates': settings.REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'],
+        'num_proxies': settings.REST_FRAMEWORK['NUM_PROXIES'],
         'postgresql_driver_loaded': any(
             module_name == 'psycopg'
             or module_name.startswith('psycopg.')
@@ -811,3 +825,69 @@ def test_production_fails_closed_when_critical_variable_is_missing(
         environment,
         f'{critical_variable} is required.',
     )
+
+
+# Sessions, CSRF, and the login-abuse control (T027).
+
+
+def test_session_and_csrf_cookies_are_hardened_outside_production():
+    result = settings_probe()
+
+    assert result['status'] == 'ok'
+    # Script may never read the session cookie.
+    assert result['session_cookie_httponly'] is True
+    assert result['session_cookie_samesite'] == 'Lax'
+    # The interface must read the CSRF cookie to echo its value back.
+    assert result['csrf_cookie_httponly'] is False
+    assert result['csrf_cookie_samesite'] == 'Lax'
+    # Development serves plain HTTP, so Secure would suppress both cookies.
+    assert result['session_cookie_secure'] is False
+    assert result['csrf_cookie_secure'] is False
+
+
+def test_production_marks_both_cookies_secure_and_keeps_every_other_rule():
+    result = settings_probe(production_environment())
+
+    assert result['status'] == 'ok'
+    assert result['session_cookie_secure'] is True
+    assert result['csrf_cookie_secure'] is True
+    assert result['session_cookie_httponly'] is True
+    assert result['csrf_cookie_httponly'] is False
+    assert result['session_cookie_samesite'] == 'Lax'
+    assert result['csrf_cookie_samesite'] == 'Lax'
+
+
+def test_session_lasts_fourteen_days_without_idle_extension():
+    result = settings_probe()
+
+    assert result['session_cookie_age'] == 60 * 60 * 24 * 14
+    assert result['session_save_every_request'] is False
+    assert result['session_expire_at_browser_close'] is False
+
+
+def test_login_throttle_has_its_own_named_cache():
+    result = settings_probe()
+
+    assert result['cache_aliases'] == ['default', 'login_throttle']
+    assert result['login_throttle_cache'] == {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'login-throttle',
+    }
+
+
+def test_both_login_throttle_rates_are_configured_and_nothing_else_is():
+    result = settings_probe()
+
+    assert result['throttle_rates'] == {
+        'login_burst': '10/minute',
+        'login_sustained': '100/hour',
+    }
+    # No default throttle class, so only the login view is throttled, and no
+    # authentication or permission default is declared here either.
+    assert result['rest_framework_keys'] == ['DEFAULT_THROTTLE_RATES', 'NUM_PROXIES']
+
+
+def test_client_address_ignores_forwarding_headers():
+    result = settings_probe()
+
+    assert result['num_proxies'] == 0
