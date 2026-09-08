@@ -76,6 +76,7 @@ describe('visual-token reference page', () => {
       'Spacing and shape',
       'Interaction states',
       'Motion',
+      'Shared interface primitives',
     ]) {
       expect(screen.getByRole('region', { name })).toBeDefined()
     }
@@ -118,25 +119,49 @@ describe('visual-token reference page', () => {
       expect(screen.getByText(label, { exact: true })).toBeDefined()
     }
 
-    expect(screen.getByText(/^Success:/)).toBeDefined()
+    expect(screen.getAllByText(/^Success:/).length).toBeGreaterThanOrEqual(2)
     expect(screen.getByText(/^Warning:/)).toBeDefined()
     expect(screen.getByText(/^Danger:/)).toBeDefined()
     expect(screen.getByText(/decorative and finite/i)).toBeDefined()
   })
 
-  test('uses native controls with an enabled keyboard target and true disabled state', () => {
+  test('uses shared native controls with enabled, disabled, and busy states', () => {
     render(<App />)
 
     const primary = screen.getByRole('button', { name: 'Primary action' })
+    const secondary = screen.getByRole('button', { name: 'Secondary action' })
     const disabled = screen.getByRole('button', { name: 'Disabled action' })
+    const busy = screen.getByRole('button', { name: 'Saving…' })
 
     expect(primary).toHaveProperty('disabled', false)
+    expect(secondary).toHaveProperty('disabled', false)
     expect(disabled).toHaveProperty('disabled', true)
+    expect(busy).toHaveProperty('disabled', true)
+    expect(busy.getAttribute('aria-busy')).toBe('true')
 
     primary.focus()
     expect(document.activeElement).toBe(primary)
     disabled.focus()
     expect(document.activeElement).toBe(primary)
+  })
+
+  test('renders labelled inputs, messages, card content, and a dialog trigger', () => {
+    render(<App />)
+
+    expect(
+      screen.getByRole('textbox', { name: 'Household display name' }),
+    ).toBeDefined()
+    const invalid = screen.getByRole('textbox', { name: 'Reference code' })
+    expect(invalid.getAttribute('aria-invalid')).toBe('true')
+    expect(invalid.getAttribute('aria-describedby')).toBe('reference-error')
+    expect(
+      screen.getByRole('textbox', { name: 'Disabled example' }),
+    ).toHaveProperty('disabled', true)
+    expect(screen.getByRole('alert').textContent).toMatch(/^Error:/)
+    expect(screen.getByRole('status').textContent).toMatch(/^Success:/)
+    expect(screen.getByRole('heading', { name: 'Composable card' })).toBeDefined()
+    expect(screen.getByText('A quiet surface for grouped content.')).toBeDefined()
+    expect(screen.getByRole('button', { name: 'Open reference dialog' })).toBeDefined()
   })
 })
 
@@ -231,19 +256,19 @@ describe('semantic token source', () => {
     const stylesheet = readSource('./styles.css')
 
     expect(stylesheet).toMatch(
-      /\.token-button\s*\{[\s\S]*?min-block-size:\s*var\(--spacing-12\);[\s\S]*?min-inline-size:\s*var\(--spacing-12\);/,
+      /\.ui-button\s*\{[\s\S]*?min-block-size:\s*var\(--spacing-12\);[\s\S]*?min-inline-size:\s*var\(--spacing-12\);/,
     )
     expect(stylesheet).toMatch(
-      /\.token-button-primary:focus-visible\s*\{[\s\S]*?outline:\s*var\(--focus-ring-width\) solid var\(--color-focus\);[\s\S]*?outline-offset:\s*var\(--focus-ring-offset\);/,
+      /\.ui-button:focus-visible,[\s\S]*?outline:\s*var\(--focus-ring-width\) solid var\(--color-focus\);[\s\S]*?outline-offset:\s*var\(--focus-ring-offset\);/,
     )
     expect(stylesheet).not.toMatch(/outline:\s*(?:0|none)/)
-    expect(stylesheet).toMatch(/\.token-button-primary:hover\s*\{/)
-    expect(stylesheet).toMatch(/\.token-button-primary:active\s*\{/)
+    expect(stylesheet).toMatch(/\.ui-button-primary:hover\s*\{/)
+    expect(stylesheet).toMatch(/\.ui-button-primary:active\s*\{/)
     expect(stylesheet).toMatch(
       /\.motion-marker\s*\{[\s\S]*?animation:[^;]*var\(--duration-normal\)[^;]*3 alternate;/,
     )
     expect(stylesheet).toMatch(
-      /\.token-button\s*\{[\s\S]*?transition:[^;]*var\(--duration-fast\)/,
+      /\.ui-button\s*\{[\s\S]*?transition:[^;]*var\(--duration-fast\)/,
     )
     expect(stylesheet).toMatch(
       /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?scroll-behavior:\s*auto[^}]*\}[\s\S]*?animation-duration:\s*0\.01ms !important;[\s\S]*?animation-iteration-count:\s*1 !important;[\s\S]*?transition-duration:\s*0\.01ms !important;/,

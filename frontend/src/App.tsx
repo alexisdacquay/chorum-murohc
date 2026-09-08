@@ -1,3 +1,25 @@
+import { Button } from './components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from './components/ui/card'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from './components/ui/dialog'
+import { FormMessage } from './components/ui/form-message'
+import { Input } from './components/ui/input'
+
 export default function App() {
   return (
     <main className="reference-page">
@@ -204,12 +226,12 @@ export default function App() {
             <p>Native controls remain clear for touch and keyboard use.</p>
           </div>
           <div className="button-group">
-            <button className="token-button token-button-primary" type="button">
-              Primary action
-            </button>
-            <button className="token-button token-button-disabled" disabled type="button">
-              Disabled action
-            </button>
+            <Button>Primary action</Button>
+            <Button variant="secondary">Secondary action</Button>
+            <Button disabled>Disabled action</Button>
+            <Button aria-busy="true" disabled>
+              Saving…
+            </Button>
           </div>
           <div className="state-messages" aria-label="Status messages">
             <p className="state-message text-success">
@@ -238,6 +260,108 @@ export default function App() {
           <p className="motion-note">
             All meaning and state labels remain present when motion is reduced.
           </p>
+        </section>
+
+        <section
+          aria-labelledby="primitives-heading"
+          className="token-section section-wide"
+        >
+          <div className="section-heading">
+            <h2 id="primitives-heading">Shared interface primitives</h2>
+            <p>
+              Production primitives compose native semantics without adding a
+              product workflow.
+            </p>
+          </div>
+
+          <div className="primitive-grid">
+            <div className="primitive-stack">
+              <h3>Inputs and messages</h3>
+
+              <div className="field-stack">
+                <label htmlFor="display-name">Household display name</label>
+                <Input
+                  aria-describedby="display-name-help"
+                  id="display-name"
+                  placeholder="Example household"
+                />
+                <FormMessage id="display-name-help" tone="help">
+                  Help: Use a name everyone recognises.
+                </FormMessage>
+              </div>
+
+              <div className="field-stack">
+                <label htmlFor="disabled-example">Disabled example</label>
+                <Input
+                  disabled
+                  id="disabled-example"
+                  value="Unavailable reference"
+                  readOnly
+                />
+              </div>
+
+              <div className="field-stack">
+                <label htmlFor="reference-code">Reference code</label>
+                <Input
+                  aria-describedby="reference-error"
+                  aria-invalid="true"
+                  defaultValue="Needs review"
+                  id="reference-code"
+                />
+                <FormMessage id="reference-error" role="alert" tone="error">
+                  Error: Enter a valid reference code.
+                </FormMessage>
+              </div>
+
+              <FormMessage role="status" tone="success">
+                Success: Shared primitives are ready.
+              </FormMessage>
+            </div>
+
+            <div className="primitive-stack">
+              <h3>Card and dialog</h3>
+
+              <Card aria-labelledby="reference-card-title">
+                <CardHeader>
+                  <CardTitle>
+                    <h3 id="reference-card-title">Composable card</h3>
+                  </CardTitle>
+                  <CardDescription>
+                    A quiet surface for grouped content.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  The card supplies presentation while its consumer supplies
+                  the real heading and content.
+                </CardContent>
+                <CardFooter>Footer content stays presentational.</CardFooter>
+              </Card>
+
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="secondary">Open reference dialog</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Shared dialog</DialogTitle>
+                    <DialogDescription>
+                      A labelled modal built on the native Radix interaction
+                      contract.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <p className="dialog-copy">
+                    This ordinary content remains readable, wraps naturally,
+                    and carries no information through motion.
+                  </p>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="secondary">Close</Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
         </section>
       </div>
     </main>
