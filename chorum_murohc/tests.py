@@ -10,7 +10,7 @@ from django.test import SimpleTestCase
 PRODUCT_PACKAGE = Path(__file__).resolve().parent
 ROOT_PACKAGE = 'chorum_murohc'
 ROOT_PACKAGE_MODULES = frozenset(
-    {'__init__', 'admin', 'api', 'apps', 'migrations', 'models', 'views'}
+    {'__init__', 'admin', 'apps', 'migrations', 'models', 'views'}
 )
 
 APP_CONFIGS = {
@@ -61,6 +61,21 @@ ALLOWED_DOMAIN_IMPORTS = {
     'rewards': frozenset({'identity', 'ledger', 'audit'}),
     'progression': frozenset({'identity', 'ledger', 'audit'}),
     'creatures': frozenset({'identity', 'progression', 'audit'}),
+    # The api package is the top layer. It may import every product package so
+    # that one household-role permission primitive can serve every endpoint,
+    # including the audit read API. Nothing may import it in return.
+    'api': frozenset(
+        {
+            'identity',
+            'audit',
+            'chores',
+            'submissions',
+            'ledger',
+            'rewards',
+            'progression',
+            'creatures',
+        }
+    ),
 }
 
 
@@ -204,7 +219,7 @@ class ProductImportBoundaryTests(SimpleTestCase):
             {'chorum_murohc'},
         )
 
-    def test_scanner_classifies_api_and_submodules_as_root_boundary(self):
+    def test_scanner_classifies_api_and_submodules_as_the_api_boundary(self):
         for source in (
             'from chorum_murohc import api',
             'from chorum_murohc.api.views import health',
@@ -212,11 +227,57 @@ class ProductImportBoundaryTests(SimpleTestCase):
             with self.subTest(source=source):
                 imported_packages = self._scan_source('api', source)
 
-                self.assertEqual(imported_packages, {ROOT_PACKAGE})
+                self.assertEqual(imported_packages, {'api'})
                 self.assertEqual(
-                    _disallowed_imports(ROOT_PACKAGE, imported_packages),
+                    _disallowed_imports('api', imported_packages),
                     set(),
                 )
+
+    def test_api_boundary_may_import_every_product_package(self):
+        for target in sorted(ALLOWED_DOMAIN_IMPORTS):
+            if target == 'api':
+                continue
+
+            with self.subTest(target=target):
+                imported_packages = self._scan_source(
+                    'api',
+                    f'from chorum_murohc.{target} import models',
+                )
+
+                self.assertEqual(imported_packages, {target})
+                self.assertEqual(
+                    _disallowed_imports('api', imported_packages),
+                    set(),
+                )
+
+    def test_no_product_package_may_import_the_api_boundary(self):
+        for source_domain in sorted(ALLOWED_DOMAIN_IMPORTS):
+            if source_domain == 'api':
+                continue
+
+            with self.subTest(source_domain=source_domain):
+                imported_packages = self._scan_source(
+                    source_domain,
+                    'from chorum_murohc.api import permissions',
+                )
+
+                self.assertEqual(imported_packages, {'api'})
+                self.assertEqual(
+                    _disallowed_imports(source_domain, imported_packages),
+                    {'api'},
+                )
+
+    def test_api_boundary_may_not_import_an_undeclared_product_package(self):
+        imported_packages = self._scan_source(
+            'api',
+            'import chorum_murohc.unapproved',
+        )
+
+        self.assertEqual(imported_packages, {'chorum_murohc.unapproved'})
+        self.assertEqual(
+            _disallowed_imports('api', imported_packages),
+            {'chorum_murohc.unapproved'},
+        )
 
     def test_scanner_keeps_every_approved_import_allowed(self):
         for source_domain, allowed_imports in ALLOWED_DOMAIN_IMPORTS.items():
