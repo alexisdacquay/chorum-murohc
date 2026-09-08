@@ -349,6 +349,24 @@ describe('the sign-in and sign-out journey', () => {
   })
 })
 
+describe('the chore pool screen', () => {
+  test('a parent who follows the Chore pool link reaches the built screen', async () => {
+    fetchSpy.mockImplementation(async (input: string) =>
+      input === '/api/v1/chores/' ? jsonResponse([]) : jsonResponse(PARENT),
+    )
+    renderApp()
+
+    await waitFor(() => expect(linkNames()).toEqual(PARENT_LABELS))
+    fireEvent.click(screen.getByRole('link', { name: 'Chore pool' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Add chore' })).toBeDefined(),
+    )
+    expect(window.location.pathname).toBe('/chore-pool')
+    expect(screen.queryByText('This screen is not built yet.')).toBeNull()
+  })
+})
+
 describe('the composition root itself', () => {
   test('derives no identity, role, or authority from the browser', () => {
     const appSource = readSource('./App.tsx')

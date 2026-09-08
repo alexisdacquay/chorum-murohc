@@ -233,6 +233,13 @@ export interface RoleRouterProps {
   /** True while the caller is still fetching the session body. */
   isLoading?: boolean
   /**
+   * Built screens, keyed by their exact approved route path. A path with no
+   * entry here still shows the neutral placeholder, so an unbuilt
+   * destination needs no change anywhere in this module. Screen ownership
+   * for this build is recorded next to `ROUTE_TABLE` above.
+   */
+  screens?: Partial<Record<string, ReactNode>>
+  /**
    * The screen shown at the signed-out destination. The router keeps its own
    * neutral panel when the composition root supplies none.
    */
@@ -256,6 +263,7 @@ function PlaceholderScreen({ heading }: { heading: string }) {
 export function RoleRouter({
   currentUser,
   isLoading = false,
+  screens = {},
   sessionControl,
   signInScreen,
 }: RoleRouterProps) {
@@ -338,7 +346,9 @@ export function RoleRouter({
   } else if (resolution.view === 'sign-in') {
     content = signInScreen ?? <PlaceholderScreen heading="Sign in" />
   } else if (resolution.entry !== null) {
-    content = <PlaceholderScreen heading={resolution.entry.label} />
+    content = screens[resolution.entry.path] ?? (
+      <PlaceholderScreen heading={resolution.entry.label} />
+    )
   } else if (role !== null) {
     // One panel for an unknown path and for the other role's path, so no
     // route can be probed. It never echoes the requested URL.
