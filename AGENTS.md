@@ -11,6 +11,7 @@ Commands
 
 Documents
 
+- `_docs/handover/2026-09-08.md` - current campaign status and exact resume point
 - `_docs/process.md` - how work is organized
 - `_docs/task-dependencies.md` - readiness gates and safe parallel workstreams
 - `_docs/dependency-approvals.md` - approvals required before adding packages
