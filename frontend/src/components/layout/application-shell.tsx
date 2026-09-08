@@ -11,12 +11,18 @@ export interface ApplicationShellProps {
   children: ReactNode
   contentKey: string
   isLoading?: boolean
+  /**
+   * Optional primary navigation, rendered in the banner after the product
+   * name. Omitted or empty, the banner carries no navigation landmark.
+   */
+  navigation?: ReactNode
 }
 
 export function ApplicationShell({
   children,
   contentKey,
   isLoading = false,
+  navigation,
 }: ApplicationShellProps) {
   const mainRef = useRef<HTMLElement>(null)
   const previousContentKey = useRef(contentKey)
@@ -41,6 +47,7 @@ export function ApplicationShell({
       </a>
       <header className="shell-header">
         <p className="shell-product-name">Chorum-murohc</p>
+        {navigation}
       </header>
       <main
         aria-busy={isLoading || undefined}
