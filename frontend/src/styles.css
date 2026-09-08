@@ -465,6 +465,53 @@
     justify-items: start;
   }
 
+  /* The signed-out screen: one column that never exceeds the narrowest
+     supported viewport, so no control can push the page sideways. */
+  .auth-panel {
+    inline-size: 100%;
+    max-inline-size: calc(var(--spacing-12) * 10);
+  }
+
+  .auth-notice {
+    display: grid;
+    min-inline-size: 0;
+    justify-items: start;
+    gap: var(--spacing-2);
+    padding-inline-start: var(--spacing-3);
+    border-inline-start: var(--spacing-1) solid var(--color-danger);
+    overflow-wrap: anywhere;
+  }
+
+  .auth-form {
+    display: grid;
+    inline-size: 100%;
+    min-inline-size: 0;
+    justify-items: start;
+    gap: var(--spacing-3);
+  }
+
+  .auth-field {
+    display: grid;
+    inline-size: 100%;
+    min-inline-size: 0;
+    gap: var(--spacing-1);
+  }
+
+  .auth-label {
+    color: var(--color-foreground);
+    font-weight: var(--font-weight-medium);
+    overflow-wrap: anywhere;
+  }
+
+  .shell-session-actions {
+    display: grid;
+    min-inline-size: 0;
+    justify-items: start;
+    gap: var(--spacing-2);
+    margin-block-start: var(--spacing-3);
+    overflow-wrap: anywhere;
+  }
+
   .health-status,
   .health-error {
     display: grid;
