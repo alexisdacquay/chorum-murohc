@@ -144,10 +144,20 @@ describe('resolveRoute', () => {
     expect(unknown.view).toBe('not-found')
     expect(resolveRoute('/rewards', 'parent').view).toBe('not-found')
     expect(resolveRoute('/approvals', 'child').view).toBe('not-found')
-    expect(resolveRoute('/sign-in', 'parent').view).toBe('not-found')
     expect(resolveRoute('/rewards', 'parent').contentKey).toBe(
       unknown.contentKey,
     )
+  })
+
+  test('sends a viewer who already has a role off the signed-out path', () => {
+    expect(resolveRoute('/sign-in', 'parent')).toMatchObject({
+      view: 'screen',
+      canonicalPath: '/overview',
+    })
+    expect(resolveRoute('/sign-in/', 'child')).toMatchObject({
+      view: 'screen',
+      canonicalPath: '/chores',
+    })
   })
 })
 
@@ -557,6 +567,65 @@ describe('RoleRouter role and session changes', () => {
 
     fireEvent.click(skipLink)
     expect(document.activeElement).toBe(screen.getByRole('main'))
+  })
+})
+
+describe('RoleRouter composition slots', () => {
+  test('shows the supplied sign-in screen instead of its own panel', () => {
+    renderAt('/household', {
+      currentUser: SIGNED_OUT_SESSION,
+      signInScreen: <p>Supplied sign-in screen</p>,
+    })
+
+    expect(window.location.pathname).toBe('/sign-in')
+    expect(screen.getByText('Supplied sign-in screen')).toBeDefined()
+    expect(screen.queryByText('This screen is not built yet.')).toBeNull()
+  })
+
+  test('rewrites a role-resolved viewer away from the signed-out path', () => {
+    renderAt('/sign-in', {
+      currentUser: parent,
+      signInScreen: <p>Supplied sign-in screen</p>,
+    })
+
+    expect(window.location.pathname).toBe('/overview')
+    expect(replaceState).toHaveBeenCalledWith(null, '', '/overview')
+    expect(screen.queryByText('Supplied sign-in screen')).toBeNull()
+    expect(screen.queryByText('Page not found')).toBeNull()
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Overview',
+    )
+  })
+
+  test('shows the session control in the banner only once a role resolves', () => {
+    const control = <button type="button">Supplied session control</button>
+
+    const signedOut = renderAt('/sign-in', {
+      currentUser: SIGNED_OUT_SESSION,
+      sessionControl: control,
+    })
+    expect(
+      screen.queryByRole('button', { name: 'Supplied session control' }),
+    ).toBeNull()
+    signedOut.unmount()
+
+    const loading = renderAt('/', {
+      currentUser: undefined,
+      isLoading: true,
+      sessionControl: control,
+    })
+    expect(
+      screen.queryByRole('button', { name: 'Supplied session control' }),
+    ).toBeNull()
+    loading.unmount()
+
+    renderAt('/overview', { currentUser: parent, sessionControl: control })
+    const supplied = screen.getByRole('button', {
+      name: 'Supplied session control',
+    })
+
+    expect(screen.getByRole('banner').contains(supplied)).toBe(true)
+    expect(screen.getByRole('main').contains(supplied)).toBe(false)
   })
 })
 

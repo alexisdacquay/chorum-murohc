@@ -23,6 +23,7 @@ import {
   useEffect,
   useState,
   type MouseEvent,
+  type ReactNode,
 } from 'react'
 
 import { ApplicationShell } from '../components/layout/application-shell'
@@ -32,9 +33,9 @@ import { RoleNavigation } from '../components/navigation/role-navigation'
 export type NavigationRole = 'parent' | 'child'
 
 /**
- * The exact body of `GET /api/v1/auth/session/`. It is exported as
- * documentation for the caller that will fetch it in #28; the router still
- * validates whatever it actually receives.
+ * The exact body of `GET /api/v1/auth/session/`. `api/session.ts` validates a
+ * real response against it; the router still validates whatever it actually
+ * receives, because a caller could pass anything.
  */
 export interface SessionSnapshot {
   is_authenticated: boolean
@@ -202,13 +203,19 @@ export function resolveRoute(
   const candidate =
     slashless !== pathname && TABLE_PATHS.has(slashless) ? slashless : pathname
 
+  // A viewer who already has a role has no business on the signed-out
+  // destination, and must not be shown the form or a not-found panel there.
+  if (candidate === SIGN_IN_PATH) {
+    return screenResolution(startEntryFor(role))
+  }
+
   const entry = ROUTE_TABLE.find((row) => row.path === candidate)
   if (entry !== undefined && entry.role === role) {
     return screenResolution(entry)
   }
 
-  // An unknown path, the other role's path, and the signed-out path all give
-  // one identical panel at the requested URL.
+  // An unknown path and the other role's path give one identical panel at the
+  // requested URL.
   return {
     view: 'not-found',
     canonicalPath: candidate,
@@ -225,6 +232,16 @@ export interface RoleRouterProps {
   currentUser: unknown
   /** True while the caller is still fetching the session body. */
   isLoading?: boolean
+  /**
+   * The screen shown at the signed-out destination. The router keeps its own
+   * neutral panel when the composition root supplies none.
+   */
+  signInScreen?: ReactNode
+  /**
+   * A control rendered in the banner beside the navigation, and only while a
+   * role is resolved. Hiding it is usability, never authorisation.
+   */
+  sessionControl?: ReactNode
 }
 
 function PlaceholderScreen({ heading }: { heading: string }) {
@@ -236,7 +253,12 @@ function PlaceholderScreen({ heading }: { heading: string }) {
   )
 }
 
-export function RoleRouter({ currentUser, isLoading = false }: RoleRouterProps) {
+export function RoleRouter({
+  currentUser,
+  isLoading = false,
+  sessionControl,
+  signInScreen,
+}: RoleRouterProps) {
   const role = resolveViewerRole(currentUser)
   const [pathname, setPathname] = useState(() => window.location.pathname)
 
@@ -298,11 +320,14 @@ export function RoleRouter({ currentUser, isLoading = false }: RoleRouterProps) 
   const entries = isLoading ? [] : navigationEntriesFor(role)
   const navigation =
     entries.length > 0 ? (
-      <RoleNavigation
-        currentPath={resolution.entry?.path ?? null}
-        entries={entries}
-        onNavigate={navigate}
-      />
+      <>
+        <RoleNavigation
+          currentPath={resolution.entry?.path ?? null}
+          entries={entries}
+          onNavigate={navigate}
+        />
+        {sessionControl}
+      </>
     ) : undefined
 
   // While the session is loading the shell shows its own loading state, so no
@@ -311,13 +336,12 @@ export function RoleRouter({ currentUser, isLoading = false }: RoleRouterProps) 
   if (isLoading) {
     content = null
   } else if (resolution.view === 'sign-in') {
-    content = <PlaceholderScreen heading="Sign in" />
+    content = signInScreen ?? <PlaceholderScreen heading="Sign in" />
   } else if (resolution.entry !== null) {
     content = <PlaceholderScreen heading={resolution.entry.label} />
   } else if (role !== null) {
-    // One panel for an unknown path, the other role's path, and the
-    // signed-out path, so no route can be probed. It never echoes the
-    // requested URL.
+    // One panel for an unknown path and for the other role's path, so no
+    // route can be probed. It never echoes the requested URL.
     const start = startEntryFor(role)
 
     content = (
