@@ -2,35 +2,23 @@
 
 import { readFileSync } from 'node:fs'
 
-import { QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import App from './App'
-import { createQueryClient } from './api/query-client'
 import { inlineFavicon } from '../vite.config'
 
-const clients: ReturnType<typeof createQueryClient>[] = []
+let fetchSpy: ReturnType<typeof vi.fn>
 
-const renderApp = () => {
-  const client = createQueryClient()
-  clients.push(client)
-  return render(
-    <QueryClientProvider client={client}>
-      <App />
-    </QueryClientProvider>,
-  )
-}
+beforeEach(() => {
+  window.history.replaceState(null, '', '/')
+  fetchSpy = vi.fn(() => new Promise<Response>(() => undefined))
+  vi.stubGlobal('fetch', fetchSpy)
+})
 
-beforeEach(() =>
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(() => new Promise<Response>(() => undefined)),
-  ),
-)
 afterEach(() => {
-  for (const client of clients.splice(0)) client.clear()
   vi.unstubAllGlobals()
+  window.history.replaceState(null, '', '/')
 })
 
 const readSource = (path: string) =>
@@ -82,121 +70,66 @@ const contrastRatio = (first: string, second: string) => {
   return (lighter + 0.05) / (darker + 0.05)
 }
 
-describe('visual-token reference page', () => {
-  test('uses one main, one product heading, and labelled reference sections', () => {
-    const { container } = renderApp()
+describe('the committed application', () => {
+  test('shows only the signed-out destination with no navigation', () => {
+    const { container } = render(<App />)
 
-    expect(container.querySelectorAll('main')).toHaveLength(1)
-    expect(screen.getAllByRole('banner')).toHaveLength(1)
+    expect(window.location.pathname).toBe('/sign-in')
     expect(screen.queryByRole('navigation')).toBeNull()
+    expect(screen.getAllByRole('banner')).toHaveLength(1)
+    expect(container.querySelectorAll('main')).toHaveLength(1)
     expect(
       screen.getByRole('link', { name: 'Skip to main content' }),
     ).toBeDefined()
-    expect(
-      screen.getAllByRole('heading', {
-        level: 1,
-        name: 'Chorum-murohc',
-      }),
-    ).toHaveLength(1)
-    expect(screen.getByText(/visual-token reference/i)).toBeDefined()
-
-    for (const name of [
-      'Colours',
-      'Typography',
-      'Spacing and shape',
-      'Interaction states',
-      'Motion',
-      'Shared interface primitives',
-      'Service connection',
-    ]) {
-      expect(screen.getByRole('region', { name })).toBeDefined()
-    }
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Sign in',
+    )
+    expect(screen.getByRole('main').textContent).toBe(
+      'Sign inThis screen is not built yet.',
+    )
   })
 
-  test('visibly labels every token family and non-colour state', () => {
-    renderApp()
+  test('exposes no parent or child affordance and makes no request', () => {
+    render(<App />)
 
     for (const label of [
-      'surface',
-      'surface-muted',
-      'foreground',
-      'foreground-muted',
-      'accent',
-      'accent-hover',
-      'on-accent',
-      'success',
-      'warning',
-      'danger',
-      'border',
-      'focus',
-      'text-sm',
-      'text-body',
-      'text-lead',
-      'text-heading-2',
-      'text-heading-1',
-      'spacing-1',
-      'spacing-2',
-      'spacing-3',
-      'spacing-4',
-      'spacing-6',
-      'spacing-8',
-      'spacing-12',
-      'radius-sm',
-      'radius-md',
-      'radius-lg',
-      'elevation-sm',
-      'elevation-md',
+      'Overview',
+      'Approvals',
+      'Chore pool',
+      'Household',
+      'Activity',
+      'Chores',
+      'Points',
+      'Rewards',
+      'Levels',
+      'Creature',
     ]) {
-      expect(screen.getByText(label, { exact: true })).toBeDefined()
+      expect(screen.queryByText(label)).toBeNull()
     }
-
-    expect(screen.getAllByText(/^Success:/).length).toBeGreaterThanOrEqual(2)
-    expect(screen.getByText(/^Warning:/)).toBeDefined()
-    expect(screen.getByText(/^Danger:/)).toBeDefined()
-    expect(screen.getByText(/decorative and finite/i)).toBeDefined()
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(document.cookie).toBe('')
+    expect(window.localStorage.length).toBe(0)
+    expect(window.sessionStorage.length).toBe(0)
   })
 
-  test('uses shared native controls with enabled, disabled, and busy states', () => {
-    renderApp()
+  test('hard-codes no identity, role, request, or browser-state read', () => {
+    const appSource = readSource('./App.tsx')
 
-    const primary = screen.getByRole('button', { name: 'Primary action' })
-    const secondary = screen.getByRole('button', { name: 'Secondary action' })
-    const disabled = screen.getByRole('button', { name: 'Disabled action' })
-    const busy = screen.getByRole('button', { name: 'Saving…' })
-
-    expect(primary).toHaveProperty('disabled', false)
-    expect(secondary).toHaveProperty('disabled', false)
-    expect(disabled).toHaveProperty('disabled', true)
-    expect(busy).toHaveProperty('disabled', true)
-    expect(busy.getAttribute('aria-busy')).toBe('true')
-
-    primary.focus()
-    expect(document.activeElement).toBe(primary)
-    disabled.focus()
-    expect(document.activeElement).toBe(primary)
-  })
-
-  test('renders labelled inputs, messages, card content, and a dialog trigger', () => {
-    renderApp()
-
-    expect(
-      screen.getByRole('textbox', { name: 'Household display name' }),
-    ).toBeDefined()
-    const invalid = screen.getByRole('textbox', { name: 'Reference code' })
-    expect(invalid.getAttribute('aria-invalid')).toBe('true')
-    expect(invalid.getAttribute('aria-describedby')).toBe('reference-error')
-    expect(
-      screen.getByRole('textbox', { name: 'Disabled example' }),
-    ).toHaveProperty('disabled', true)
-    expect(screen.getByRole('alert').textContent).toMatch(/^Error:/)
-    expect(
-      screen
-        .getByText('Success: Shared primitives are ready.')
-        .closest('[role="status"]'),
-    ).toBeDefined()
-    expect(screen.getByRole('heading', { name: 'Composable card' })).toBeDefined()
-    expect(screen.getByText('A quiet surface for grouped content.')).toBeDefined()
-    expect(screen.getByRole('button', { name: 'Open reference dialog' })).toBeDefined()
+    for (const forbidden of [
+      /document\.cookie/,
+      /localStorage/,
+      /sessionStorage/,
+      /\bfetch\s*\(/,
+      /useQuery/,
+      /['"]parent['"]/,
+      /['"]child['"]/,
+      /location\.search/,
+      /URLSearchParams/,
+    ]) {
+      expect(appSource).not.toMatch(forbidden)
+    }
+    expect(appSource).toContain('SIGNED_OUT_SESSION')
   })
 })
 
@@ -277,6 +210,9 @@ describe('semantic token source', () => {
       ['danger', 'surface', 4.5, 6.47],
       ['border', 'surface', 3, 4.76],
       ['focus', 'surface', 3, 5.17],
+      ['accent', 'surface-muted', 4.5, 6.12],
+      ['accent-hover', 'surface-muted', 4.5, 7.96],
+      ['foreground', 'surface-muted', 4.5, 16.3],
     ] as const
 
     for (const [foreground, background, threshold, recorded] of pairs) {
@@ -287,27 +223,48 @@ describe('semantic token source', () => {
     }
   })
 
-  test('defines accessible focus, target, motion, and reduced-motion rules', () => {
+  test('defines accessible focus, target, and reduced-motion rules', () => {
     const stylesheet = readSource('./styles.css')
 
     expect(stylesheet).toMatch(
       /\.ui-button\s*\{[\s\S]*?min-block-size:\s*var\(--spacing-12\);[\s\S]*?min-inline-size:\s*var\(--spacing-12\);/,
     )
     expect(stylesheet).toMatch(
-      /\.ui-button:focus-visible,[\s\S]*?outline:\s*var\(--focus-ring-width\) solid var\(--color-focus\);[\s\S]*?outline-offset:\s*var\(--focus-ring-offset\);/,
+      /\.skip-link:focus-visible,[\s\S]*?\.primary-navigation-link:focus-visible,\s*\.page-panel-link:focus-visible\s*\{\s*outline:\s*var\(--focus-ring-width\) solid var\(--color-focus\);\s*outline-offset:\s*var\(--focus-ring-offset\);/,
     )
     expect(stylesheet).not.toMatch(/outline:\s*(?:0|none)/)
     expect(stylesheet).toMatch(/\.ui-button-primary:hover\s*\{/)
     expect(stylesheet).toMatch(/\.ui-button-primary:active\s*\{/)
-    expect(stylesheet).toMatch(
-      /\.motion-marker\s*\{[\s\S]*?animation:[^;]*var\(--duration-normal\)[^;]*3 alternate;/,
-    )
     expect(stylesheet).toMatch(
       /\.ui-button\s*\{[\s\S]*?transition:[^;]*var\(--duration-fast\)/,
     )
     expect(stylesheet).toMatch(
       /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?scroll-behavior:\s*auto[^}]*\}[\s\S]*?animation-duration:\s*0\.01ms !important;[\s\S]*?animation-iteration-count:\s*1 !important;[\s\S]*?transition-duration:\s*0\.01ms !important;/,
     )
+  })
+
+  test('gives navigation links a reachable target and a non-colour current cue', () => {
+    const stylesheet = readSource('./styles.css')
+
+    expect(stylesheet).toMatch(
+      /\.primary-navigation-link,\s*\.page-panel-link\s*\{[\s\S]*?min-block-size:\s*var\(--spacing-12\);\s*min-inline-size:\s*var\(--spacing-12\);/,
+    )
+    expect(stylesheet).toMatch(
+      /\.primary-navigation-link,\s*\.page-panel-link\s*\{[\s\S]*?overflow-wrap:\s*anywhere;/,
+    )
+    expect(stylesheet).toMatch(
+      /\.primary-navigation-list\s*\{[\s\S]*?flex-wrap:\s*wrap;/,
+    )
+    expect(stylesheet).toMatch(/\.primary-navigation-link:hover,/)
+    expect(stylesheet).toMatch(/\.primary-navigation-link:active,/)
+
+    const current = stylesheet.match(
+      /\.primary-navigation-link\[aria-current='page'\]\s*\{([\s\S]*?)\}/,
+    )?.[1]
+
+    expect(current).toMatch(/border-block-end-color:/)
+    expect(current).toMatch(/font-weight:\s*var\(--font-weight-bold\);/)
+    expect(current).toMatch(/text-decoration:\s*none;/)
   })
 
   test('wires one global stylesheet and one first-party Tailwind plugin', () => {
