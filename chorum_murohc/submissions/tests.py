@@ -75,6 +75,7 @@ def test_submission_has_the_exact_runtime_model_contract():
         'chore',
         'chore_name',
         'chore_points',
+        'note',
         'status',
         'idempotency_key',
         'rejection_reason',
@@ -90,6 +91,7 @@ def test_submission_has_the_exact_runtime_model_contract():
         chore,
         chore_name,
         chore_points,
+        note,
         status,
         idempotency_key,
         rejection_reason,
@@ -107,6 +109,11 @@ def test_submission_has_the_exact_runtime_model_contract():
 
     assert type(chore_points) is models.IntegerField
     assert chore_points.null is False
+
+    assert type(note) is models.CharField
+    assert note.max_length == 280
+    assert note.blank is True
+    assert note.default == ''
 
     assert type(status) is models.CharField
     assert status.max_length == 9
@@ -211,8 +218,23 @@ def test_a_submission_is_created_pending_with_null_decision_fields():
     assert submission.decided_by_id is None
     assert submission.chore_name == 'Dishes'
     assert submission.chore_points == 10
+    assert submission.note == ''
     assert before <= submission.created_at <= timezone.now()
     assert timezone.is_aware(submission.created_at)
+
+
+@pytest.mark.django_db
+def test_a_submission_keeps_the_note_it_was_created_with():
+    household = _household()
+    child = _child(household)
+    chore = _chore(household)
+
+    submission = Submission.objects.create(
+        **_submission_kwargs(household, child, chore, note='Left the mop out')
+    )
+    submission.refresh_from_db()
+
+    assert submission.note == 'Left the mop out'
 
 
 @pytest.mark.django_db
@@ -648,6 +670,7 @@ def test_submission_schema_has_exact_table_columns_foreign_keys_and_indexes():
         'chore_id',
         'chore_name',
         'chore_points',
+        'note',
         'status',
         'idempotency_key',
         'rejection_reason',
@@ -662,6 +685,7 @@ def test_submission_schema_has_exact_table_columns_foreign_keys_and_indexes():
         'chore_id': True,
         'chore_name': False,
         'chore_points': False,
+        'note': False,
         'status': False,
         'idempotency_key': False,
         'rejection_reason': False,

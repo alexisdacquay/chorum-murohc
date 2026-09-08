@@ -3,13 +3,17 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchSession, sessionQueryKey } from './api/session'
 import { SignInForm } from './components/auth/sign-in-form'
 import { SignOutButton } from './components/auth/sign-out-button'
+import { ChildChoreScreen } from './components/chores/child-chore-screen'
 import { ChorePoolScreen } from './components/chores/chore-pool-screen'
 import { RoleRouter } from './navigation/role-router'
 
 // Screens built so far, keyed by their approved route path (issue #37 owns
-// `/chore-pool`). Every other approved path still falls back to the
-// router's own neutral placeholder.
-const SCREENS = { '/chore-pool': <ChorePoolScreen /> }
+// `/chore-pool`, issue #36 owns `/chores`). Every other approved path still
+// falls back to the router's own neutral placeholder.
+const SCREENS = {
+  '/chore-pool': <ChorePoolScreen />,
+  '/chores': <ChildChoreScreen />,
+}
 
 /**
  * The composition root.

@@ -48,6 +48,10 @@ class Submission(models.Model):
     )
     chore_name = models.CharField(max_length=100)
     chore_points = models.IntegerField()
+    # The child's own optional word on the attempt ("left the mop out"). Never
+    # required, never interpreted by the server, and never touched once the
+    # submission is decided.
+    note = models.CharField(max_length=280, blank=True, default='')
     status = models.CharField(
         max_length=9,
         choices=Status.choices,

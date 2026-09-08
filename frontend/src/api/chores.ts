@@ -1,10 +1,13 @@
 /**
  * The chore-pool API client for the merged T035 contract (issue #35).
  *
- * Five routes under `/api/v1/chores/`, parent-only for every write. This
- * client is used only from the parent chore-pool screen, so it always reads
- * and sends the parent shape (id, name, points, is_active, created_at,
- * updated_at); the shorter child shape belongs to a future child screen.
+ * Five routes under `/api/v1/chores/`, parent-only for every write. Most of
+ * this module is used only from the parent chore-pool screen and reads and
+ * sends the parent shape (id, name, points, is_active, created_at,
+ * updated_at). `fetchChildChores` is the one exception: the child chore
+ * browser (issue #36) reads the same `GET` route but the server answers a
+ * child caller with the shorter three-field shape, so it gets its own type
+ * and its own runtime guard rather than stretching `Chore` to cover both.
  *
  * Same-origin session authentication and CSRF only, matching `api/session.ts`
  * exactly: `ensureCsrfToken` and the CSRF header it exports are reused here
@@ -28,6 +31,13 @@ export interface Chore {
   is_active: boolean
   created_at: string
   updated_at: string
+}
+
+/** The three-field shape a child caller sees: never a state or a timestamp. */
+export interface ChildChore {
+  id: number
+  name: string
+  points: number
 }
 
 export const CHORES_QUERY_KEY_ROOT = 'chores' as const
@@ -96,6 +106,29 @@ export const isChore = (value: unknown): value is Chore => {
 
 const isChoreList = (value: unknown): value is Chore[] =>
   Array.isArray(value) && value.every(isChore)
+
+/** The exact three-key child shape the merged contract returns for one chore. */
+export const isChildChore = (value: unknown): value is ChildChore => {
+  if (!isRecord(value) || Object.keys(value).length !== 3) {
+    return false
+  }
+  for (const key of ['id', 'name', 'points']) {
+    if (!Object.hasOwn(value, key)) {
+      return false
+    }
+  }
+
+  return (
+    typeof value.id === 'number' &&
+    Number.isInteger(value.id) &&
+    typeof value.name === 'string' &&
+    typeof value.points === 'number' &&
+    Number.isInteger(value.points)
+  )
+}
+
+const isChildChoreList = (value: unknown): value is ChildChore[] =>
+  Array.isArray(value) && value.every(isChildChore)
 
 /**
  * Reduce a 400 body to one first message per field.
@@ -192,6 +225,31 @@ export const fetchChores = async ({
   }
   const body = await readJsonBody(response)
   if (response.status !== 200 || !isChoreList(body)) {
+    throw new ChoreRequestError('unavailable')
+  }
+  return body
+}
+
+export const CHILD_CHORES_QUERY_KEY = ['chores', 'child'] as const
+
+/** `GET /api/v1/chores/`: the active pool, in the child's own three-field shape. */
+export const fetchChildChores = async ({
+  signal,
+}: { signal?: AbortSignal } = {}): Promise<ChildChore[]> => {
+  const response = await send('/api/v1/chores/', {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal,
+  })
+
+  if (response.redirected) {
+    throw new ChoreRequestError('unavailable')
+  }
+  if (response.status === 403) {
+    throw new ChoreRequestError('forbidden')
+  }
+  const body = await readJsonBody(response)
+  if (response.status !== 200 || !isChildChoreList(body)) {
     throw new ChoreRequestError('unavailable')
   }
   return body
