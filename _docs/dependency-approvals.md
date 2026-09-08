@@ -19,7 +19,7 @@ blanket installation approval.
 | DA-05 | T011 | React, TypeScript, Vite, Vitest, and Testing Library foundation | Approved |
 | DA-06 | T012 | Tailwind CSS | Approved |
 | DA-07 | T013 | Local component foundation and required Radix primitives | Approved |
-| DA-08 | T016 | TanStack Query | Pending exact proposal and approval |
+| DA-08 | T016 | TanStack Query | Approved |
 | DA-09 | T028 | React Hook Form and Zod | Pending exact proposal and approval |
 | DA-10 | T083 | Motion, only if CSS is demonstrably insufficient | Conditional; pending exact proposal and approval |
 | DA-11 | T088 | Playwright | Pending exact proposal and approval |
@@ -106,6 +106,18 @@ blanket installation approval.
 - Approval date: 2026-09-08
 - Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/13#issuecomment-5576815474
 - Owning task: T013
+
+### DA-08 — Approved
+
+- Direct package(s): `@tanstack/react-query`
+- Ecosystem and manifest: frontend pnpm runtime dependency in `frontend/package.json` and generated `frontend/pnpm-lock.yaml`
+- Purpose: provide the `QueryClient` provider, one health query, cancellation, request state, and manual retry
+- Permitted version range(s): `@tanstack/react-query>=5.102.8 <6.0.0`
+- Excluded packages: direct Query Core, devtools, persistence, Router, Axios, ky, SWR, Zod, MSW, CORS, authentication and cookie helpers, and other extra dependencies
+- Approved by: alexisdacquay
+- Approval date: 2026-09-08
+- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/16#issuecomment-5581263288
+- Owning task: T016
 
 ## Approval record template
 
