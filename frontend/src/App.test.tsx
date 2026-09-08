@@ -20,6 +20,7 @@ const PARENT_LABELS = [
   'Overview',
   'Approvals',
   'Chore pool',
+  'Reward requests',
   'Household',
   'Activity',
 ]

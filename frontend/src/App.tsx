@@ -6,16 +6,20 @@ import { SignOutButton } from './components/auth/sign-out-button'
 import { ChildChoreScreen } from './components/chores/child-chore-screen'
 import { ChorePoolScreen } from './components/chores/chore-pool-screen'
 import { HouseholdScreen } from './components/members/household-screen'
+import { ChildRewardsScreen } from './components/rewards/child-rewards-screen'
+import { ParentRewardsScreen } from './components/rewards/parent-rewards-screen'
 import { RoleRouter } from './navigation/role-router'
 
 // Screens built so far, keyed by their approved route path (issue #37 owns
-// `/chore-pool`, issue #36 owns `/chores`, issue #21 owns `/household`).
-// Every other approved path still falls back to the router's own neutral
-// placeholder.
+// `/chore-pool`, issue #36 owns `/chores`, issue #21 owns `/household`; issue
+// #55 owns `/rewards` and `/reward-requests`). Every other approved path
+// still falls back to the router's own neutral placeholder.
 const SCREENS = {
   '/chore-pool': <ChorePoolScreen />,
   '/chores': <ChildChoreScreen />,
   '/household': <HouseholdScreen />,
+  '/rewards': <ChildRewardsScreen />,
+  '/reward-requests': <ParentRewardsScreen />,
 }
 
 /**

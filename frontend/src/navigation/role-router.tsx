@@ -66,11 +66,19 @@ const SIGN_IN_PATH = '/sign-in'
  * Screen owners, recorded here rather than in the interface: /overview #85,
  * /approvals #48, /chore-pool #37, /household #24, /activity #87, /chores
  * #36, /points #49, /rewards #58, /levels #65, /creature #83, /sign-in #28.
+ * /reward-requests is the one addition issue #55 makes: the parent side of
+ * the merged rewards feature (fulfil, cancel, and catalogue management) has
+ * no earlier route to extend, and cannot share child-only `/rewards`, since
+ * every path in this table maps to exactly one role. Its label is "Reward
+ * requests" rather than "Rewards": every other entry gives its nav label and
+ * screen heading the same words, and the child's own `/rewards` link already
+ * owns the shorter name in the same navigation vocabulary.
  */
 export const ROUTE_TABLE: readonly RouteEntry[] = [
   { path: '/overview', label: 'Overview', role: 'parent' },
   { path: '/approvals', label: 'Approvals', role: 'parent' },
   { path: '/chore-pool', label: 'Chore pool', role: 'parent' },
+  { path: '/reward-requests', label: 'Reward requests', role: 'parent' },
   { path: '/household', label: 'Household', role: 'parent' },
   { path: '/activity', label: 'Activity', role: 'parent' },
   { path: '/chores', label: 'Chores', role: 'child' },
