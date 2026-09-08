@@ -1,3 +1,4 @@
+from decimal import Decimal
 from importlib import import_module
 from pathlib import Path
 
@@ -122,6 +123,7 @@ def test_models_module_imports_only_django():
     source_lines = Path(module.__file__).resolve().read_text().splitlines()
 
     assert [line for line in source_lines if line.startswith(('import ', 'from '))] == [
+        'from django.core.exceptions import ValidationError',
         'from django.db import models',
         'from django.db.models.functions import Lower',
     ]
@@ -190,17 +192,24 @@ def test_points_stay_whole_with_the_column_ceiling_as_the_only_upper_bound():
     household = Household.objects.create(name='Whole-points household')
     field = Chore._meta.get_field('points')
 
-    with pytest.raises(ValidationError) as rejected:
-        Chore(household=household, name='Fraction', points='2.5').full_clean()
-    assert 'points' in rejected.value.message_dict
+    for fractional in (2.5, '2.5', Decimal('2.5'), -0.5):
+        with pytest.raises(ValidationError) as rejected:
+            Chore(household=household, name='Fraction', points=fractional).full_clean()
+        assert 'points' in rejected.value.message_dict
 
-    # A Python float never reaches the column as a fraction: Django's
-    # IntegerField converts it, so the stored value is always whole. See the
-    # note posted on issue #34 about the float form of this criterion.
-    coerced = Chore.objects.create(household=household, name='Coerced', points=2.5)
-    coerced.refresh_from_db()
-    assert coerced.points == 2
-    assert type(coerced.points) is int
+    # A whole value in a floating-point wrapper is not fractional, so validation
+    # accepts it and the column stores a plain whole number.
+    whole = Chore(household=household, name='Whole float', points=3.0)
+    whole.full_clean()
+    whole.save()
+    whole.refresh_from_db()
+    assert whole.points == 3
+    assert type(whole.points) is int
+
+    # Rejecting the fraction does not swallow the other fields' errors.
+    with pytest.raises(ValidationError) as both_wrong:
+        Chore(household=household, name='', points=2.5).full_clean()
+    assert sorted(both_wrong.value.message_dict) == ['name', 'points']
 
     # No business maximum: the only bounds are the ones the backend derives
     # from the 32-bit integer column.
