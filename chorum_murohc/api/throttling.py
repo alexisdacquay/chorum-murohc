@@ -1,5 +1,16 @@
 """Login-abuse throttles, keyed on the client address.
 
+The control counts FAILED login attempts only: 10 per minute and 100 per
+hour per client address. A login that succeeds is not an attack and spends
+nothing, so a household sharing one address cannot lock itself out by
+signing its members in.
+
+`SimpleRateThrottle.allow_request` both checks and records, which would
+count every attempt including the successful ones. These classes therefore
+split the two halves: `allow_request` only reads the counter, and
+`record_failure` is the one place that ever writes to it. The login view
+calls `record_failure` on its failure path alone.
+
 The rates live in `config/settings.py` under `DEFAULT_THROTTLE_RATES`, and
 the counters live in their own named cache so that clearing an application
 cache cannot reset the control.
@@ -33,6 +44,46 @@ class _LoginRateThrottle(SimpleRateThrottle):
             'scope': self.scope,
             'ident': self.get_ident(request),
         }
+
+    def allow_request(self, request, view):
+        """Read the allowance without spending it.
+
+        Unlike the base class this records nothing, so calling it is free and
+        repeatable. `self.now` and `self.history` are still set because the
+        framework asks a refusing throttle for its `wait()`.
+        """
+        if self.rate is None:
+            return True
+
+        self.key = self.get_cache_key(request, view)
+        if self.key is None:
+            return True
+
+        self.now = self.timer()
+        self.history = self._recent_attempts(self.key, self.now)
+        return len(self.history) < self.num_requests
+
+    def record_failure(self, request, view=None):
+        """Spend one unit of the allowance for one failed login attempt."""
+        if self.rate is None:
+            return
+
+        key = self.get_cache_key(request, view)
+        if key is None:
+            return
+
+        now = self.timer()
+        history = self._recent_attempts(key, now)
+        # Newest first, which is the order the base class stores and expires.
+        history.insert(0, now)
+        self.cache.set(key, history, self.duration)
+
+    def _recent_attempts(self, key, now):
+        """The stored attempts that are still inside the rate window."""
+        history = self.cache.get(key, [])
+        while history and history[-1] <= now - self.duration:
+            history.pop()
+        return history
 
 
 class LoginBurstThrottle(_LoginRateThrottle):

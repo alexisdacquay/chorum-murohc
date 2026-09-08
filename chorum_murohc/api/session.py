@@ -23,6 +23,10 @@ a deleted membership, or a role outside `parent` and `child` all resolve to a
 null household and a null role rather than to a guess, and roles are never
 unioned across households. Every login failure answers with one identical
 generic detail, so no response reveals whether an account exists.
+
+The login abuse control counts failed attempts only. A caller already over
+the limit is refused before any authentication work; a login that succeeds
+spends nothing.
 """
 
 from django.contrib.auth import authenticate
@@ -178,6 +182,15 @@ class LoginView(_SessionAPIView):
     permission_classes = (HasValidCsrfToken,)
     throttle_classes = (LoginBurstThrottle, LoginSustainedThrottle)
 
+    def initial(self, request, *args, **kwargs):
+        # Read the brake before anything touches the body: the CSRF permission
+        # check parses it, so a caller already over the limit must be refused
+        # here rather than answered with a parse failure. Reading spends
+        # nothing, so the framework's own later check reads the same answer.
+        if request.method == 'POST':
+            self.check_throttles(request)
+        super().initial(request, *args, **kwargs)
+
     def throttled(self, request, wait):
         # One fixed body with no wait hint, so a refusal says nothing about
         # the submitted username or about how much allowance is left.
@@ -185,16 +198,29 @@ class LoginView(_SessionAPIView):
 
     def handle_exception(self, exc):
         # A body this endpoint cannot parse is answered with the same generic
-        # failure as any other. The CSRF check reads the body first, so the
-        # parse can fail before the handler is ever reached.
+        # failure as any other, and counts as one failed attempt. The CSRF
+        # check reads the body first, so the parse can fail before the handler
+        # is ever reached.
         if isinstance(exc, ParseError):
-            return _login_failed()
+            return self.login_failed()
         return super().handle_exception(exc)
+
+    def login_failed(self):
+        """Answer the one generic failure and spend one unit of allowance.
+
+        Every way a login can fail comes through here, so an unknown
+        username, a wrong password, a disabled account, an invalid body and
+        an unparseable body each record exactly one attempt against both the
+        burst and the sustained scope.
+        """
+        for throttle in self.get_throttles():
+            throttle.record_failure(self.request, self)
+        return _login_failed()
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
-            return _login_failed()
+            return self.login_failed()
 
         http_request = request._request
         user = authenticate(
@@ -203,7 +229,7 @@ class LoginView(_SessionAPIView):
             password=serializer.validated_data['password'],
         )
         if user is None or not user.is_active:
-            return _login_failed()
+            return self.login_failed()
 
         # Rotate the session identifier: the one the caller arrived with is
         # destroyed before the authenticated one is created, so a fixated

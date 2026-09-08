@@ -1,5 +1,8 @@
 """Tests for the login-abuse control.
 
+The control counts FAILED login attempts only, 10 a minute and 100 an hour
+per client address, so a login that succeeds spends nothing.
+
 Every fixture is synthetic. The rates under test are the configured ones, so
 these tests fail if `config/settings.py` ever loosens them silently.
 """
@@ -10,7 +13,11 @@ from django.test import RequestFactory
 from rest_framework.settings import api_settings
 from rest_framework.test import APIClient
 
-from chorum_murohc.api.session import LOGIN_THROTTLED_DETAIL, LoginView
+from chorum_murohc.api.session import (
+    LOGIN_FAILED_DETAIL,
+    LOGIN_THROTTLED_DETAIL,
+    LoginView,
+)
 from chorum_murohc.api.throttling import (
     LOGIN_THROTTLE_CACHE_ALIAS,
     LoginBurstThrottle,
@@ -27,6 +34,7 @@ SYNTHETIC_OTHER_PASSWORD = 'synthetic-login-value-2'
 
 BURST_LIMIT = 10
 THROTTLED_BODY = {'detail': LOGIN_THROTTLED_DETAIL}
+LOGIN_FAILURE_BODY = {'detail': LOGIN_FAILED_DETAIL}
 
 
 @pytest.fixture(autouse=True)
@@ -59,6 +67,23 @@ def post_login(api_client, username, password, extra_headers=None):
         format='json',
         headers=headers,
     )
+
+
+def post_unparsable_body(api_client):
+    """Post a body the endpoint cannot parse, with a valid CSRF token."""
+    api_client.get(SESSION_PATH)
+    return api_client.post(
+        LOGIN_PATH,
+        'not json at all',
+        content_type='application/json',
+        headers={'x-csrftoken': api_client.cookies['csrftoken'].value},
+    )
+
+
+def recorded_attempts(throttle):
+    """The attempts stored for the default test client address."""
+    request = RequestFactory().post(LOGIN_PATH)
+    return caches[LOGIN_THROTTLE_CACHE_ALIAS].get(throttle.get_cache_key(request, None))
 
 
 def assert_refused(response):
@@ -111,19 +136,68 @@ def test_the_cache_key_is_the_client_address_and_never_the_username():
 # The control in use.
 
 
-def test_the_eleventh_attempt_is_refused_and_the_tenth_still_authenticates(
+def test_the_eleventh_failure_is_refused_and_the_tenth_is_still_answered(
     api_client, member
 ):
     for attempt in range(BURST_LIMIT - 1):
         response = post_login(api_client, member.username, SYNTHETIC_OTHER_PASSWORD)
         assert response.status_code == 400, attempt
 
-    allowed = post_login(api_client, member.username, SYNTHETIC_PASSWORD)
+    tenth = post_login(api_client, member.username, SYNTHETIC_OTHER_PASSWORD)
+    eleventh = post_login(api_client, member.username, SYNTHETIC_OTHER_PASSWORD)
+
+    assert tenth.status_code == 400
+    assert tenth.json() == LOGIN_FAILURE_BODY
+    assert_refused(eleventh)
+
+
+def test_ten_successful_logins_in_a_row_are_allowed_and_spend_nothing(
+    api_client, member
+):
+    for attempt in range(BURST_LIMIT):
+        response = post_login(api_client, member.username, SYNTHETIC_PASSWORD)
+        assert response.status_code == 200, attempt
+        assert response.json()['is_authenticated'] is True
+
+    # Nothing was counted at all, so the whole allowance is still there.
+    assert recorded_attempts(LoginBurstThrottle()) is None
+    assert recorded_attempts(LoginSustainedThrottle()) is None
+    for attempt in range(BURST_LIMIT):
+        response = post_login(api_client, member.username, SYNTHETIC_OTHER_PASSWORD)
+        assert response.status_code == 400, attempt
+
+
+def test_ten_failures_then_one_more_failure_is_refused(api_client, member):
+    for attempt in range(BURST_LIMIT):
+        response = post_login(api_client, member.username, SYNTHETIC_OTHER_PASSWORD)
+        assert response.status_code == 400, attempt
+
+    assert_refused(post_login(api_client, member.username, SYNTHETIC_OTHER_PASSWORD))
+
+
+def test_ten_failures_then_the_correct_password_is_still_refused(api_client, member):
+    for attempt in range(BURST_LIMIT):
+        response = post_login(api_client, member.username, SYNTHETIC_OTHER_PASSWORD)
+        assert response.status_code == 400, attempt
+
     refused = post_login(api_client, member.username, SYNTHETIC_PASSWORD)
 
-    assert allowed.status_code == 200
-    assert allowed.json()['is_authenticated'] is True
+    # The brake is already engaged, so the correct password never gets tried.
     assert_refused(refused)
+    assert api_client.get(SESSION_PATH).json()['is_authenticated'] is False
+
+
+def test_an_unparsable_body_counts_as_one_failed_attempt(api_client, member):
+    for attempt in range(BURST_LIMIT - 1):
+        response = post_login(api_client, member.username, SYNTHETIC_OTHER_PASSWORD)
+        assert response.status_code == 400, attempt
+
+    unparsable = post_unparsable_body(api_client)
+
+    assert unparsable.status_code == 400
+    assert unparsable.json() == LOGIN_FAILURE_BODY
+    # It spent the tenth unit, so the next attempt meets the brake.
+    assert_refused(post_login(api_client, member.username, SYNTHETIC_PASSWORD))
 
 
 def test_the_refusal_is_identical_for_a_username_that_does_not_exist(
