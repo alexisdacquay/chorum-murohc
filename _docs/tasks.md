@@ -1,4 +1,4 @@
-# Chorum-murohc — Implementation Backlog
+# Chorum-murohc - Implementation Backlog
 
 This backlog covers the current product scope in `_docs/plan.md` and the
 selected implementation track in `_docs/design.md`. Long-term product and
@@ -6,11 +6,9 @@ technical possibilities remain in `_docs/roadmap.md` until the product owner
 promotes them into the current scope.
 
 Each entry is a source brief for one GitHub issue; Task 1 is referenced as T001,
-Task 2 as T002, and so on. Before delegation, the orchestrator must add the
-workstream, merged dependencies, owned paths,
-acceptance criteria, and verification required by `_docs/process.md`; the source
-brief alone is not Ready. Task IDs are stable references, while
-`_docs/task-dependencies.md` controls execution order.
+Task 2 as T002, and so on. Task IDs are stable references. A brief is a starting
+point, not a contract: work out the acceptance criteria and the order yourself,
+one issue per feature, one branch, one pull request.
 
 Tasks are intended for one focused engineering session except the explicitly
 approved one-task-per-creature-lineage work. Those lineage tasks remain one
@@ -263,19 +261,19 @@ Implementation work follows two additional rules:
 
 **Goal**: State what a child asserts when submitting a chore without photo proof.
 
-**Description**: Record in `_docs/completion-attestation.md` that the current-scope submission is an explicit child assertion that the work is complete and that the server cannot independently prove physical completion. Specify confirmation wording, duplicate policy, and parent rejection behaviour, and obtain product-owner approval before the submission endpoint is built.
+**Description**: Done. A submission is an explicit child assertion that the work is complete; the server cannot prove physical completion. The confirmation wording, duplicate policy, allowed transitions and rejection behaviour now live in `chorum_murohc/submissions/models.py` and its tests.
 
 ## 41. Model chore completion submissions
 
 **Goal**: Persist a child's completion assertion and its review state.
 
-**Description**: Using `_docs/completion-attestation.md`, add a submission linked to household, child, and chore with pending, approved, and rejected states and decision attribution. Enforce valid transitions and test duplicate policy, immutable chore name and point snapshots, household isolation, timestamps, and state constraints.
+**Description**: Add a submission linked to household, child, and chore with pending, approved, and rejected states and decision attribution. Enforce valid transitions and test duplicate policy, immutable chore name and point snapshots, household isolation, timestamps, and state constraints.
 
 ## 42. Implement the chore-submission API
 
 **Goal**: Let a child attest that an active chore has been completed and request review.
 
-**Description**: Add a child-only DRF endpoint that creates a pending submission exactly as specified in `_docs/completion-attestation.md` and emits an audit event. Test confirmation input, inactive or foreign chores, duplicate policy, child ownership, forbidden parent submission, idempotent retry, and compact validation errors.
+**Description**: Add a child-only DRF endpoint that creates a pending submission, matching the states and duplicate policy already enforced by the submission model, and emits an audit event. Test confirmation input, inactive or foreign chores, duplicate policy, child ownership, forbidden parent submission, idempotent retry, and compact validation errors.
 
 ## 43. Build the child submission interaction
 
@@ -389,7 +387,7 @@ Implementation work follows two additional rules:
 
 **Goal**: Define every level cost and its relationship to creature forms.
 
-**Description**: Record in `_docs/levelling-policy.md` the exact escalation formula beginning at 500 then 510 points, rounding, maximum level within the planned 30–40 range, insufficient-funds behaviour, and mapping from levels to the approximately 35 ordered form indices. Do not assume one form per level; include a complete cost and mapping table and obtain product-owner approval before implementation.
+**Description**: Record in `_docs/levelling-policy.md` the exact escalation formula beginning at 500 then 510 points, rounding, maximum level within the planned 30-40 range, insufficient-funds behaviour, and mapping from levels to the approximately 35 ordered form indices. Do not assume one form per level; include a complete cost and mapping table and obtain product-owner approval before implementation.
 
 ## 62. Model the child's progression state
 
@@ -599,4 +597,4 @@ Implementation work follows two additional rules:
 
 **Goal**: Produce an evidence-backed go or no-go decision for the current planned scope.
 
-**Description**: Complete the integration-owned `_docs/requirements-evidence.md` matrix by tracing every requirement in `_docs/plan.md` to an implemented screen, API, model or approved policy and a runnable result, without pulling in roadmap features. Record gaps compactly, return no-go while any required evidence is missing, and create separate issues rather than implementing fixes inside this verification task.
+**Description**: Trace every requirement in `_docs/plan.md` to an implemented screen, API, model or approved policy and a runnable result, without pulling in roadmap features. Record the gaps in the issue, return no-go while any required evidence is missing, and file separate issues rather than fixing anything inside this verification task.

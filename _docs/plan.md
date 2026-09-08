@@ -1,4 +1,4 @@
-# Chorum-murohc — Project Plan
+# Chorum-murohc - Project Plan
 
 > **Status:** Planning
 
@@ -26,7 +26,7 @@ Household chore management web app with a points economy, gamification, and crea
 
 - Adults create and manage a pool of chores
 - Each chore has a name and a fixed point value (set by adults)
-- All chores are always available — no scheduling, no disappearing after claim
+- All chores are always available - no scheduling, no disappearing after claim
 - Any child can pick any chore at any time
 - Frequency policing is manual (adults approve or reject)
 
@@ -55,19 +55,19 @@ Household chore management web app with a points economy, gamification, and crea
 - Example: level 10 = base 20% + 300% = 320% monthly interest
 - Intent: strongly incentivise saving over spending
 
-### Spending — Rewards
+### Spending - Rewards
 
 - 1 point = 1 minute of video game time
 - 200 points = £5 pocket money
 - No other reward types
 
-### Spending — Leveling Up
+### Spending - Leveling Up
 
 - Leveling consumes points (single currency, no separate XP)
 - Level 1 costs 500 points
 - Level 2 costs 510 additional points
 - Mild escalation per level
-- Approximately 30–40 levels total
+- Approximately 30-40 levels total
 
 ## Creature System
 

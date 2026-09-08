@@ -1,32 +1,40 @@
-Commands
+# Chorum-murohc
 
-- `uv sync --locked` - install exactly the locked dependencies
-- `uv run --locked pytest` - run the whole suite
-- `uv run --locked pytest chorum_murohc/tests.py` - the baseline test file after T001
-- `uv run --locked ruff format --check .` - verify Python formatting
-- `uv run --locked ruff check .` - verify Python linting
-- `pnpm --dir frontend install --frozen-lockfile` - install exactly the locked frontend dependencies
-- `pnpm --dir frontend test` - run the whole frontend suite
-- `pnpm --dir frontend build` - type-check and build the frontend
+A family chores-and-rewards web app for two parents and their children. Children
+submit completed chores, a parent approves with a PIN, points land in a ledger
+and buy rewards and creature progression.
 
-Documents
+## Where the code lives
 
-- `_docs/handover/2026-09-08.md` - current campaign status and exact resume point
-- `_docs/process.md` - how work is organized
-- `_docs/task-dependencies.md` - readiness gates and safe parallel workstreams
-- `_docs/dependency-approvals.md` - approvals required before adding packages
-- `_docs/requirements-evidence.md` - integration-owned plan coverage and proof
-- Before writing tests, read `_docs/testing-guidelines.md`
-- For anything touching the UI, read `_docs/design-system.md`
+- `chorum_murohc/` - Django. One package per domain: `identity`, `chores`,
+  `submissions`, `ledger`, `rewards`, `progression`, `creatures`, `audit`.
+  `chorum_murohc/api/` is the only HTTP layer; no domain package imports it.
+- `config/` - Django settings. `frontend/` - React, TypeScript, Vite, Tailwind.
+- `_docs/` - `plan.md` scope, `design.md` architecture, `tasks.md` backlog,
+  `design-system.md` UI, `testing-guidelines.md` tests, `roadmap.md` deferred,
+  and the approval, retention and dependency product policies.
 
-Rules
+## The two gates
 
-- Python dependencies are added in `pyproject.toml`; frontend dependencies go
-  in the frontend manifest once it exists. Do not add any dependency without
-  asking and recording approval in `_docs/dependency-approvals.md`.
-- Do not begin implementation unless the GitHub issue satisfies the Ready gate
-  in `_docs/process.md` and all dependencies are merged.
-- A write-capable worker must have an isolated branch and worktree. If agents
-  share a checkout, only one may write and the others are read-only reviewers.
-- Non-owners install only from lockfiles. They must not regenerate or update a
-  dependency lockfile.
+    uv sync --locked
+    uv run --locked ruff format --check . && uv run --locked ruff check .
+    uv run --locked python manage.py check
+    uv run --locked python manage.py makemigrations --check --dry-run
+    uv run --locked pytest
+
+    pnpm --dir frontend install --frozen-lockfile
+    pnpm --dir frontend test && pnpm --dir frontend build
+
+CI runs these as the Backend and Frontend checks. Both green, or no merge.
+
+## House rules
+
+- One issue per feature, one branch, one pull request. No grooming, no
+  readiness gate, no separate reviewer, no handover document. You design it,
+  build it, test it and land it; the gates are the only check.
+- Simplest thing that works and is tested. Prefer the boring solution.
+- You own every file you need to touch. There is no file-ownership contract. If
+  a merged test blocks a legitimate change, fix that test and say so in the PR.
+- Backend and frontend ship in one branch and one pull request, with their tests.
+- Ask before adding a dependency; record it in `_docs/dependency-approvals.md`.
+- Plain ASCII everywhere. No third-party characters, brands or assets.

@@ -604,38 +604,8 @@ def test_deleting_the_decided_by_parent_leaves_a_null_actor_and_the_row_intact()
     assert submission.status == Submission.Status.APPROVED
 
 
-def test_the_submissions_package_holds_schema_modules_only():
-    package_root = (
-        Path(import_module('chorum_murohc.submissions').__file__).resolve().parent
-    )
-    modules = sorted(
-        path.relative_to(package_root).as_posix()
-        for path in package_root.rglob('*.py')
-        if '__pycache__' not in path.parts
-    )
-
-    assert modules == [
-        '__init__.py',
-        'apps.py',
-        'migrations/0001_initial.py',
-        'migrations/__init__.py',
-        'models.py',
-        'tests.py',
-    ]
+def test_the_submissions_models_are_not_registered_in_the_django_admin():
     assert admin.site.is_registered(Submission) is False
-
-
-def test_the_submissions_app_adds_exactly_one_migration():
-    migrations_directory = (
-        Path(import_module('chorum_murohc.submissions.migrations').__file__)
-        .resolve()
-        .parent
-    )
-    assert sorted(
-        path.name
-        for path in migrations_directory.glob('*.py')
-        if path.name != '__init__.py'
-    ) == ['0001_initial.py']
 
 
 @pytest.mark.django_db
