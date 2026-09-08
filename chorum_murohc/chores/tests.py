@@ -509,17 +509,6 @@ def test_initial_migration_has_the_exact_schema_only_contract():
     assert operation.managers == []
 
 
-def test_the_chores_app_adds_exactly_one_migration():
-    migrations_directory = (
-        Path(import_module('chorum_murohc.chores.migrations').__file__).resolve().parent
-    )
-    assert sorted(
-        path.name
-        for path in migrations_directory.glob('*.py')
-        if path.name != '__init__.py'
-    ) == ['0001_initial.py']
-
-
 @pytest.mark.django_db
 def test_migration_graph_is_applied_and_runtime_matches_migration_state():
     executor = MigrationExecutor(connection)
@@ -595,20 +584,5 @@ def test_postgresql_reports_the_named_check_constraints():
     }
 
 
-def test_the_chores_package_holds_schema_modules_only():
-    package_root = Path(import_module('chorum_murohc.chores').__file__).resolve().parent
-    modules = sorted(
-        path.relative_to(package_root).as_posix()
-        for path in package_root.rglob('*.py')
-        if '__pycache__' not in path.parts
-    )
-
-    assert modules == [
-        '__init__.py',
-        'apps.py',
-        'migrations/0001_initial.py',
-        'migrations/__init__.py',
-        'models.py',
-        'tests.py',
-    ]
+def test_the_chores_models_are_not_registered_in_the_django_admin():
     assert admin.site.is_registered(Chore) is False

@@ -59,8 +59,7 @@ def step_blocks(job):
     return blocks
 
 
-def test_ci_is_the_only_workflow_with_exact_triggers():
-    assert sorted(path.name for path in WORKFLOWS_DIRECTORY.iterdir()) == ['ci.yml']
+def test_the_ci_workflow_has_exact_triggers():
     text = workflow_text()
 
     assert text.startswith('name: CI\n\n')

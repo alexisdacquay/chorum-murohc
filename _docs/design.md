@@ -1,4 +1,4 @@
-# Chorum-murohc — Design v1
+# Chorum-murohc - Design v1
 
 > **Status:** Selected planning direction; not yet implemented.
 
@@ -410,9 +410,8 @@ the related mutation remains denied.
 - Security acceptance: `alexisdacquay`, 2026-09-08,
   [issue 18 comment 5584623381](https://github.com/alexisdacquay/chorum-murohc/issues/18#issuecomment-5584623381).
   The product owner deliberately waived a separate third-party security
-  reviewer, having been shown the residual risks below. That deviation from the
-  two-approver expectation in [`process.md`](process.md) is recorded on the
-  issue rather than hidden. No agent approved this policy.
+  reviewer, having been shown the residual risks below. That waiver is recorded
+  on the issue rather than hidden.
 - Any substantive change to actor authority, data scope, denial behaviour, trust
   assumptions, or mitigation ownership requires both approvals again.
 

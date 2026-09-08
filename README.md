@@ -30,14 +30,16 @@ agreed household rewards.
 
 ## Documentation
 
-- [Project plan](_docs/plan.md) — current product scope and requirements
-- [Design](_docs/design.md) — selected architecture and implementation track
-- [Backlog](_docs/tasks.md) — self-contained implementation tasks
-- [Development process](_docs/process.md) — issue readiness, isolation, review, and handoff rules
-- [Delegation map](_docs/task-dependencies.md) — dependencies and safe parallel workstreams
-- [Dependency approvals](_docs/dependency-approvals.md) — package-change approval register
-- [Requirements evidence](_docs/requirements-evidence.md) — current-plan coverage and verification ledger
-- [Roadmap](_docs/roadmap.md) — ideas intentionally deferred beyond the current scope
+- [Contributor map](AGENTS.md) - layout, the two gates, and the house rules
+- [Project plan](_docs/plan.md) - current product scope and requirements
+- [Design](_docs/design.md) - selected architecture and implementation track
+- [Backlog](_docs/tasks.md) - self-contained implementation tasks
+- [Testing guidelines](_docs/testing-guidelines.md) - what to test and at which layer
+- [Design system](_docs/design-system.md) - interface tokens and component rules
+- [Dependency approvals](_docs/dependency-approvals.md) - package-change register
+- [Approval authentication](_docs/approval-authentication.md) - parent PIN policy
+- [Retention policy](_docs/retention-policy.md) - deactivate, edit and delete rules
+- [Roadmap](_docs/roadmap.md) - ideas intentionally deferred beyond the current scope
 
 ## Local development
 
@@ -157,11 +159,11 @@ and never replaces the explicit frozen install above.
 
 ## Project structure
 
-- `config/` — project-wide Django settings and URL routing
-- `chorum_murohc/` — the main Chorum-murohc Django app
-- `frontend/` — React and TypeScript browser application
-- `_docs/plan.md` — current product plan and requirements
-- `manage.py` — command-line entry point for Django tasks
+- `config/` - project-wide Django settings and URL routing
+- `chorum_murohc/` - the main Chorum-murohc Django app
+- `frontend/` - React and TypeScript browser application
+- `_docs/plan.md` - current product plan and requirements
+- `manage.py` - command-line entry point for Django tasks
 
 The public project and app name uses a hyphen. Python package names cannot use
 hyphens, so the app's importable code folder uses `chorum_murohc` instead.
@@ -211,8 +213,8 @@ character must match one of these ASCII grammars exactly.
 
 | Lineage | Exact target grammar | Boundaries | Required host |
 | --- | --- | --- | --- |
-| Local task | `task_tNNN_<worker-token>` | `NNN` is exactly three ASCII digits; the token is 8–16 lowercase ASCII letters or digits | `127.0.0.1` |
-| CI job | `ci_<run-id>_<attempt>_<job-token>` | Run ID is 1–20 ASCII digits; attempt is 1–3 ASCII digits; token is 8–16 lowercase ASCII letters or digits | `postgres` |
+| Local task | `task_tNNN_<worker-token>` | `NNN` is exactly three ASCII digits; the token is 8-16 lowercase ASCII letters or digits | `127.0.0.1` |
+| CI job | `ci_<run-id>_<attempt>_<job-token>` | Run ID is 1-20 ASCII digits; attempt is 1-3 ASCII digits; token is 8-16 lowercase ASCII letters or digits | `postgres` |
 
 Whitespace, uppercase, Unicode, punctuation other than the fixed underscores,
 missing uniqueness tokens, unknown prefixes, and oversized values are rejected.
@@ -300,7 +302,7 @@ outside this approval and require a newly groomed task and explicit approval.
 
 Task T006 adds the custom user model and its first product migration without
 weakening or rewriting this guard. Its local verifier must generate a unique
-`task_t006_<worker-token>` target, where the token is 8–16 lowercase ASCII
+`task_t006_<worker-token>` target, where the token is 8-16 lowercase ASCII
 letters or digits. It must use the exact derived base, role, and test names
 above, prove the same preflight facts, and let Django apply the new migration
 only inside the disposable test database. The base database remains an empty

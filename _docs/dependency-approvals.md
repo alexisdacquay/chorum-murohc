@@ -1,143 +1,31 @@
-# Dependency Approval Register
+# Dependency Approvals
 
-No entry in this document grants approval by itself. A direct dependency may be
-added only after the product owner approves its package name, purpose, ecosystem,
-and compatible version range. Record that decision here and link the approving
-issue or discussion before changing a manifest or lockfile.
+Ask before adding a direct dependency. Say the package, what it is for and the
+version range, get the product owner's yes on the issue, then add a row below
+and change the manifest. Transitive packages arrive through the lockfile and
+need no row. A major-version change to a direct dependency needs a new row.
+`_docs/design.md` records technical intent; it is not an installation approval.
 
-The selected stack in `_docs/design.md` records technical intent. It is not a
-blanket installation approval.
+## Approved
 
-## Planned approval gates
-
-| Gate | Earliest task | Proposed purpose | Status |
+| Package(s) | For | Range | Issue |
 | --- | --- | --- | --- |
-| DA-01 | T001 | `pytest` and `pytest-django` baseline | Approved |
-| DA-02 | T003 | One Python formatter and linter | Approved |
-| DA-03 | T005 | PostgreSQL driver | Approved |
-| DA-04 | T010 | Django REST Framework | Approved |
-| DA-05 | T011 | React, TypeScript, Vite, Vitest, and Testing Library foundation | Approved |
-| DA-06 | T012 | Tailwind CSS | Approved |
-| DA-07 | T013 | Local component foundation and required Radix primitives | Approved |
-| DA-08 | T016 | TanStack Query | Approved |
-| DA-09 | T028 | React Hook Form and Zod | Pending exact proposal and approval |
-| DA-10 | T083 | Motion, only if CSS is demonstrably insufficient | Conditional; pending exact proposal and approval |
-| DA-11 | T088 | Playwright | Pending exact proposal and approval |
+| `pytest`, `pytest-django` | Backend test baseline | `pytest>=9.1.1,<10`, `pytest-django>=4.14,<5` | [#1](https://github.com/alexisdacquay/chorum-murohc/issues/1#issuecomment-5555010370) |
+| `ruff` | One backend formatter and linter | `>=0.16.6,<0.17` | [#3](https://github.com/alexisdacquay/chorum-murohc/issues/3#issuecomment-5555495792) |
+| `psycopg[binary]` | Django's PostgreSQL driver | `>=3.3.5,<3.4` | [#5](https://github.com/alexisdacquay/chorum-murohc/issues/5#issuecomment-5555796197) |
+| `djangorestframework` | API dispatch, JSON, negotiation, errors | `>=3.18.1,<3.19` | [#10](https://github.com/alexisdacquay/chorum-murohc/issues/10#issuecomment-5576002924) |
+| `react`, `react-dom` | Frontend runtime | `>=19.2.8,<20` | [#11](https://github.com/alexisdacquay/chorum-murohc/issues/11#issuecomment-5560573600) |
+| `typescript`, `vite`, `@vitejs/plugin-react`, `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/dom`, `@types/node`, `@types/react`, `@types/react-dom` | Frontend build and test toolchain | as locked in `frontend/package.json` | [#11](https://github.com/alexisdacquay/chorum-murohc/issues/11#issuecomment-5560573600) |
+| `tailwindcss`, `@tailwindcss/vite` | Tailwind v4 tokens and utilities, no PostCSS adapter | `>=4.3.3,<4.4` | [#12](https://github.com/alexisdacquay/chorum-murohc/issues/12#issuecomment-5576277632) |
+| `@radix-ui/react-dialog`, `@radix-ui/react-slot`, `class-variance-authority`, `clsx`, `tailwind-merge` | Accessible dialog, slot composition, variant and class contracts | `>=1.1.23,<1.2`, `>=1.3.3,<1.4`, `>=0.7.1,<0.8`, `>=2.1.1,<3`, `>=3.6,<4` | [#13](https://github.com/alexisdacquay/chorum-murohc/issues/13#issuecomment-5576815474) |
+| `@tanstack/react-query` | Query client, request state, retry | `>=5.102.8,<6` | [#16](https://github.com/alexisdacquay/chorum-murohc/issues/16#issuecomment-5581263288) |
 
-### DA-01 — Approved
+Deliberately excluded so far: the shadcn CLI and the aggregate `radix-ui`
+package, lucide, animation and motion libraries, the Tailwind PostCSS adapter,
+form and data libraries beyond the ones above, MSW, and Axios, ky or SWR.
 
-- Direct package(s): `pytest`, `pytest-django`
-- Ecosystem and manifest: Python, `pyproject.toml` and generated `uv.lock`
-- Purpose: establish the canonical locked pytest baseline
-- Permitted version range(s): `pytest>=9.1.1,<10.0`, `pytest-django>=4.14.0,<5.0`
-- Approved by: alexisdacquay
-- Approval date: 2026-09-05
-- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/1#issuecomment-5555010370
-- Owning task: T001
+## Not yet asked for
 
-### DA-02 — Approved
-
-- Direct package(s): `ruff`
-- Ecosystem and manifest: Python, `pyproject.toml` and generated `uv.lock`
-- Purpose: provide one locked backend formatter and linter for reproducible formatting and lint checks
-- Permitted version range(s): `ruff>=0.16.6,<0.17.0`
-- Approved by: alexisdacquay
-- Approval date: 2026-09-06
-- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/3#issuecomment-5555495792
-- Owning task: T003
-
-### DA-03 — Approved
-
-- Direct package(s): `psycopg[binary]`
-- Ecosystem and manifest: Python runtime dependency in `pyproject.toml` and generated `uv.lock`
-- Purpose: provide Django's PostgreSQL driver for local and CI verification
-- Permitted version range(s): `psycopg[binary]>=3.3.5,<3.4.0`
-- Approved by: alexisdacquay
-- Approval date: 2026-09-06
-- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/5#issuecomment-5555796197
-- Owning task: T005
-
-### DA-04 — Approved
-
-- Direct package(s): `djangorestframework`
-- Ecosystem and manifest: Python runtime dependency in `pyproject.toml` and generated `uv.lock`
-- Purpose: provide DRF-native request dispatch, JSON responses, method and Accept negotiation, and error behaviour for the versioned API foundation
-- Permitted version range(s): `djangorestframework>=3.18.1,<3.19.0`
-- Approved by: alexisdacquay
-- Approval date: 2026-09-07
-- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/10#issuecomment-5576002924
-- Owning task: T010
-
-### DA-05 — Approved
-
-- Direct package(s):
-  - Runtime: `react`, `react-dom`
-  - Development: `typescript`, `vite`, `@vitejs/plugin-react`, `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/dom`, `@types/node`, `@types/react`, `@types/react-dom`
-- Ecosystem and manifest: frontend pnpm, `frontend/package.json` and generated `frontend/pnpm-lock.yaml`
-- Purpose: provide the minimal React, TypeScript, and Vite application plus the Vitest and Testing Library DOM smoke-test foundation
-- Permitted version range(s):
-  - Runtime: `react>=19.2.8,<20`, `react-dom>=19.2.8,<20`
-  - Development: `typescript>=6.0.2,<6.1`, `vite>=8.2.2,<9`, `@vitejs/plugin-react>=6.1.1,<7`, `vitest>=5,<6`, `jsdom>=30.0.1,<31`, `@testing-library/react>=16.3.3,<17`, `@testing-library/dom>=10.4.1,<11`, `@types/node>=24.13.3,<25`, `@types/react>=19.2.18,<20`, `@types/react-dom>=19.2.7,<20`
-- Approved by: alexisdacquay
-- Approval date: 2026-09-06
-- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/11#issuecomment-5560573600
-- Owning task: T011
-
-### DA-06 — Approved
-
-- Direct package(s): `tailwindcss`, `@tailwindcss/vite`
-- Ecosystem and manifest: frontend pnpm development dependencies in `frontend/package.json` and generated `frontend/pnpm-lock.yaml`
-- Purpose: provide Tailwind CSS v4 semantic-token and utility generation with the first-party Vite integration
-- Permitted version range(s): `tailwindcss>=4.3.3 <4.4.0`, `@tailwindcss/vite>=4.3.3 <4.4.0`
-- Excluded packages: PostCSS adapter and runtime UI packages
-- Approved by: alexisdacquay
-- Approval date: 2026-09-07
-- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/12#issuecomment-5576277632
-- Owning task: T012
-
-### DA-07 — Approved
-
-- Direct package(s): `@radix-ui/react-dialog`, `@radix-ui/react-slot`, `class-variance-authority`, `clsx`, `tailwind-merge`
-- Ecosystem and manifest: frontend pnpm runtime dependencies in `frontend/package.json` and generated `frontend/pnpm-lock.yaml`
-- Purpose: provide the issue-defined accessible Dialog primitive, Slot composition, variant contracts, and deterministic class composition for the first local component foundation
-- Permitted version range(s): `@radix-ui/react-dialog>=1.1.23 <1.2.0`, `@radix-ui/react-slot>=1.3.3 <1.4.0`, `class-variance-authority>=0.7.1 <0.8.0`, `clsx>=2.1.1 <3.0.0`, `tailwind-merge>=3.6.0 <4.0.0`
-- Excluded packages: shadcn CLI/package, aggregate `radix-ui`, lucide, animation, PostCSS, form, data, motion, Playwright and test packages, remote generators, and any sixth primitive
-- Approved by: alexisdacquay
-- Approval date: 2026-09-08
-- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/13#issuecomment-5576815474
-- Owning task: T013
-
-### DA-08 — Approved
-
-- Direct package(s): `@tanstack/react-query`
-- Ecosystem and manifest: frontend pnpm runtime dependency in `frontend/package.json` and generated `frontend/pnpm-lock.yaml`
-- Purpose: provide the `QueryClient` provider, one health query, cancellation, request state, and manual retry
-- Permitted version range(s): `@tanstack/react-query>=5.102.8 <6.0.0`
-- Excluded packages: direct Query Core, devtools, persistence, Router, Axios, ky, SWR, Zod, MSW, CORS, authentication and cookie helpers, and other extra dependencies
-- Approved by: alexisdacquay
-- Approval date: 2026-09-08
-- Evidence link: https://github.com/alexisdacquay/chorum-murohc/issues/16#issuecomment-5581263288
-- Owning task: T016
-
-## Approval record template
-
-```markdown
-### <gate> — <status>
-
-- Direct package(s):
-- Ecosystem and manifest:
-- Purpose:
-- Permitted version range(s):
-- Approved by:
-- Approval date:
-- Evidence link:
-- Owning task:
-```
-
-Transitive packages are accepted only through the generated, reviewed lockfile.
-Adding, replacing, or making a major-version change to a direct dependency needs
-a new approval record.
-
-Valid states are Pending, Approved, Rejected, and Superseded. The approving
-human and evidence must be named, and an agent cannot approve its own proposal.
-This register is itself a shared file owned by the integration owner.
+React Hook Form and Zod (forms), Motion (only if CSS is demonstrably
+insufficient), and Playwright (end-to-end journeys). Each still needs a
+proposal and an approval before it is installed.
