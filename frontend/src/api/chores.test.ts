@@ -6,7 +6,9 @@ import {
   createChore,
   deactivateChore,
   deleteChore,
+  fetchChildChores,
   fetchChores,
+  isChildChore,
   isChore,
   reactivateChore,
   updateChore,
@@ -104,6 +106,53 @@ describe('fetchChores', () => {
     await expect(fetchChores({ includeInactive: false })).rejects.toMatchObject({
       kind: 'unavailable',
     })
+  })
+})
+
+describe('isChildChore', () => {
+  const CHILD_CHORE = { id: 5, name: 'Wash dishes', points: 10 }
+
+  test('accepts exactly the three-key child shape', () => {
+    expect(isChildChore(CHILD_CHORE)).toBe(true)
+  })
+
+  test.each([
+    ['missing a field', { id: 5, name: 'Wash dishes' }],
+    ['extra field', { ...CHILD_CHORE, is_active: true }],
+    ['wrong type', { ...CHILD_CHORE, points: '10' }],
+    ['fractional id', { ...CHILD_CHORE, id: 5.5 }],
+    ['null', null],
+    ['array', [CHILD_CHORE]],
+  ])('rejects %s', (_name, value) => {
+    expect(isChildChore(value)).toBe(false)
+  })
+})
+
+describe('fetchChildChores', () => {
+  test('requests the child shape and returns it', async () => {
+    const chore = { id: 5, name: 'Wash dishes', points: 10 }
+    vi.mocked(fetch).mockResolvedValue(jsonResponse([chore]))
+
+    await expect(fetchChildChores()).resolves.toEqual([chore])
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/chores/', {
+      credentials: 'same-origin',
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: undefined,
+    })
+  })
+
+  test('maps a 403 to forbidden without touching the body', async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ detail: 'nope' }, 403))
+
+    await expect(fetchChildChores()).rejects.toMatchObject({ kind: 'forbidden' })
+  })
+
+  test('rejects a body carrying the parent shape as unavailable', async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse([CHORE]))
+
+    await expect(fetchChildChores()).rejects.toMatchObject({ kind: 'unavailable' })
   })
 })
 
