@@ -1,13 +1,44 @@
-import { RoleRouter, SIGNED_OUT_SESSION } from './navigation/role-router'
+import { useQuery } from '@tanstack/react-query'
+
+import { fetchSession, sessionQueryKey } from './api/session'
+import { SignInForm } from './components/auth/sign-in-form'
+import { SignOutButton } from './components/auth/sign-out-button'
+import { RoleRouter } from './navigation/role-router'
 
 /**
- * The committed application shows the signed-out state and nothing else.
+ * The composition root.
  *
- * #28 connects the live session, at which point this component will pass the
- * fetched `GET /api/v1/auth/session/` body to the router. Until then there is
- * deliberately no identity, no role, no role switch, no request, and no
- * cookie or browser-storage read here.
+ * It asks `GET /api/v1/auth/session/` once who the caller is and hands that
+ * answer, untouched, to the router. It decides no role of its own: it holds
+ * no identity literal, reads no cookie, no URL and no browser storage, and
+ * every authority decision stays with the server.
+ *
+ * A request that has not answered yet shows the shell loading state, so
+ * neither navigation nor the sign-in form can flash first. A request that
+ * failed shows the sign-in screen with one recoverable notice, exactly as a
+ * signed-out answer does, because a viewer who cannot be identified is not
+ * signed in.
  */
 export default function App() {
-  return <RoleRouter currentUser={SIGNED_OUT_SESSION} />
+  const session = useQuery({
+    queryKey: sessionQueryKey,
+    queryFn: ({ signal }) => fetchSession({ signal }),
+  })
+
+  return (
+    <RoleRouter
+      currentUser={session.data}
+      isLoading={session.isPending}
+      sessionControl={<SignOutButton />}
+      signInScreen={
+        <SignInForm
+          isRetryingSession={session.isFetching}
+          isSessionUnavailable={session.isError}
+          onRetrySession={() => {
+            void session.refetch()
+          }}
+        />
+      }
+    />
+  )
 }
