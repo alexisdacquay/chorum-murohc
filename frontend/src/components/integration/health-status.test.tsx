@@ -97,10 +97,11 @@ describe('HealthStatus', () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
 
     const checking = screen.getByRole('button', { name: 'Checking…' })
-    expect(checking.getAttribute('aria-disabled')).toBe('true')
+    expect(checking).toHaveProperty('disabled', true)
     expect(checking.getAttribute('aria-busy')).toBe('true')
-    expect(screen.getByRole('status').textContent).toBe('Checking service…')
-    expect(document.activeElement).toBe(checking)
+    const retryStatus = screen.getByRole('status')
+    expect(retryStatus.textContent).toBe('Checking service…')
+    expect(document.activeElement).toBe(retryStatus)
     fireEvent.click(checking)
     expect(fetch).toHaveBeenCalledTimes(2)
 
@@ -108,6 +109,8 @@ describe('HealthStatus', () => {
     await waitFor(() =>
       expect(screen.getByRole('status').textContent).toBe('Service available.'),
     )
+    expect(screen.getByRole('status')).toBe(retryStatus)
+    expect(document.activeElement).toBe(retryStatus)
   })
 
   test('returns to the identical alert when a manual retry fails', async () => {
@@ -116,14 +119,18 @@ describe('HealthStatus', () => {
       .mockRejectedValueOnce(new Error('second failure'))
 
     renderStatus()
-    fireEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+    const retry = await screen.findByRole('button', { name: 'Try again' })
+    retry.focus()
+    fireEvent.click(retry)
 
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
     expect(screen.getAllByRole('alert')).toHaveLength(1)
     expect(
       screen.getByText('We could not check the service. Try again.'),
     ).toBeDefined()
-    expect(screen.getByRole('button', { name: 'Try again' })).toBeDefined()
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Try again' }),
+    )
   })
 
   test('aborts an active request on unmount without retry or console warning', async () => {

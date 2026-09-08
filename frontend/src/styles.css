@@ -625,6 +625,11 @@
     color: var(--color-success);
   }
 
+  .health-status-message:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--focus-ring-offset);
+  }
+
   .health-error {
     padding-inline-start: var(--spacing-3);
     border-inline-start: var(--spacing-1) solid var(--color-danger);
