@@ -75,7 +75,8 @@
     line-height: var(--text-body--line-height);
   }
 
-  button {
+  button,
+  input {
     font: inherit;
   }
 }
@@ -263,43 +264,249 @@
     gap: var(--spacing-3);
   }
 
-  .token-button {
+  .ui-button {
+    display: inline-flex;
     min-block-size: var(--spacing-12);
     min-inline-size: var(--spacing-12);
+    align-items: center;
+    justify-content: center;
     padding: var(--spacing-2) var(--spacing-4);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     font-weight: var(--font-weight-medium);
+    text-align: center;
     transition: background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
       box-shadow var(--duration-fast) var(--ease-standard);
   }
 
-  .token-button-primary {
+  .ui-button-primary {
+    border-color: var(--color-accent);
     background: var(--color-accent);
     box-shadow: var(--shadow-sm);
     color: var(--color-on-accent);
     cursor: pointer;
   }
 
-  .token-button-primary:hover {
+  .ui-button-primary:hover {
+    border-color: var(--color-accent-hover);
     background: var(--color-accent-hover);
     box-shadow: var(--shadow-md);
   }
 
-  .token-button-primary:active {
+  .ui-button-primary:active {
+    border-color: var(--color-accent-hover);
     background: var(--color-accent-hover);
     box-shadow: var(--shadow-sm);
   }
 
-  .token-button-primary:focus-visible {
+  .ui-button-secondary {
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+    color: var(--color-foreground);
+    cursor: pointer;
+  }
+
+  .ui-button-secondary:hover {
+    background: var(--color-surface-muted);
+    box-shadow: var(--shadow-md);
+  }
+
+  .ui-button-secondary:active {
+    background: var(--color-surface-muted);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .ui-button:focus-visible,
+  .ui-input:focus-visible,
+  .ui-dialog-content:focus-visible {
     outline: var(--focus-ring-width) solid var(--color-focus);
     outline-offset: var(--focus-ring-offset);
   }
 
-  .token-button-disabled {
+  .ui-button:disabled,
+  .ui-button[aria-disabled='true'] {
+    border-color: var(--color-border);
     background: var(--color-surface-muted);
     color: var(--color-foreground-muted);
     cursor: not-allowed;
+  }
+
+  .ui-input {
+    display: block;
+    inline-size: 100%;
+    min-block-size: var(--spacing-12);
+    min-inline-size: 0;
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-foreground);
+    transition: background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard);
+  }
+
+  .ui-input:disabled {
+    background: var(--color-surface-muted);
+    color: var(--color-foreground-muted);
+    cursor: not-allowed;
+  }
+
+  .ui-input::placeholder {
+    color: var(--color-foreground-muted);
+  }
+
+  .ui-input[aria-invalid='true'] {
+    border-color: var(--color-danger);
+  }
+
+  .form-message {
+    margin: 0;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .form-message-help {
+    color: var(--color-foreground-muted);
+  }
+
+  .form-message-error {
+    color: var(--color-danger);
+  }
+
+  .form-message-success {
+    color: var(--color-success);
+  }
+
+  .ui-card {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .ui-card-header,
+  .ui-card-content,
+  .ui-card-footer {
+    padding: var(--spacing-4);
+  }
+
+  .ui-card-header {
+    display: grid;
+    gap: var(--spacing-1);
+  }
+
+  .ui-card-title h3,
+  .ui-card-description {
+    margin: 0;
+  }
+
+  .ui-card-title h3 {
+    font-size: var(--text-lead);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--text-lead--line-height);
+  }
+
+  .ui-card-description,
+  .ui-card-footer {
+    color: var(--color-foreground-muted);
+  }
+
+  .ui-card-footer {
+    border-block-start: 1px solid var(--color-border);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .primitive-grid,
+  .primitive-stack,
+  .field-stack {
+    display: grid;
+  }
+
+  .primitive-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-6);
+  }
+
+  .primitive-stack {
+    min-inline-size: 0;
+    align-content: start;
+    gap: var(--spacing-4);
+  }
+
+  .primitive-stack > h3 {
+    margin: 0;
+  }
+
+  .field-stack {
+    min-inline-size: 0;
+    gap: var(--spacing-2);
+  }
+
+  .field-stack label {
+    font-weight: var(--font-weight-medium);
+  }
+
+  .ui-dialog-overlay {
+    position: fixed;
+    z-index: 1;
+    inset: 0;
+    background: var(--color-foreground);
+  }
+
+  .ui-dialog-content {
+    position: fixed;
+    z-index: 2;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    display: grid;
+    inline-size: calc(100% - var(--spacing-8));
+    max-inline-size: calc(var(--spacing-12) * 10);
+    max-block-size: calc(100dvh - var(--spacing-8));
+    min-inline-size: 0;
+    gap: var(--spacing-4);
+    padding: var(--spacing-4);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-md);
+    color: var(--color-foreground);
+    overflow-wrap: anywhere;
+    transform: translate(-50%, -50%);
+    transition: box-shadow var(--duration-normal) var(--ease-standard);
+  }
+
+  .ui-dialog-header,
+  .ui-dialog-footer {
+    display: grid;
+    gap: var(--spacing-2);
+  }
+
+  .ui-dialog-title,
+  .ui-dialog-description,
+  .dialog-copy {
+    margin: 0;
+  }
+
+  .ui-dialog-title {
+    font-size: var(--text-heading-2);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--text-heading-2--line-height);
+  }
+
+  .ui-dialog-description {
+    color: var(--color-foreground-muted);
+  }
+
+  .ui-dialog-footer {
+    justify-items: start;
   }
 
   .state-messages {
@@ -360,6 +567,10 @@
 
   .colour-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .primitive-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
