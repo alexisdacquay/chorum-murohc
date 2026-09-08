@@ -1,6 +1,7 @@
 from django.urls import path
 
 from chorum_murohc.api.audit import AuditEventListView
+from chorum_murohc.api.balances import BalanceView, LedgerHistoryView
 from chorum_murohc.api.chores import (
     ChoreDeactivateView,
     ChoreDetailView,
@@ -30,4 +31,6 @@ urlpatterns = [
         name='chore-reactivate',
     ),
     path('audit/', AuditEventListView.as_view(), name='audit-list'),
+    path('balance/', BalanceView.as_view(), name='balance'),
+    path('ledger/', LedgerHistoryView.as_view(), name='ledger-history'),
 ]
