@@ -77,6 +77,7 @@ packages.
 | --- | --- | --- |
 | `config` | Django composition root: settings, root URLs, ASGI, and WSGI only | No product models or migrations |
 | `chorum_murohc` | Existing installed Chorum-murohc compatibility/root app and package namespace | No product models or product migrations |
+| `chorum_murohc.api` | Versioned HTTP API layer: routing, endpoints, serializers, and the shared household-role permission primitive | No product models or migrations |
 | `chorum_murohc.identity` | Users, households, memberships, and parent PIN persistence | T006, T007, and T030 |
 | `chorum_murohc.audit` | Append-only audit events | T008 |
 | `chorum_murohc.chores` | Reusable household chore definitions | T034 |
@@ -92,6 +93,7 @@ map:
 | Importing package | Product packages it may import |
 | --- | --- |
 | `chorum_murohc` root | None |
+| `chorum_murohc.api` | Every product package: `identity`, `audit`, `chores`, `submissions`, `ledger`, `rewards`, `progression`, `creatures` |
 | `chorum_murohc.audit` | None |
 | `chorum_murohc.identity` | `audit` |
 | `chorum_murohc.chores` | `audit` |
@@ -100,6 +102,14 @@ map:
 | `chorum_murohc.rewards` | `identity`, `ledger`, `audit` |
 | `chorum_murohc.progression` | `identity`, `ledger`, `audit` |
 | `chorum_murohc.creatures` | `identity`, `progression`, `audit` |
+
+`chorum_murohc.api` is the top layer and no product package may import it.
+It was promoted out of the root boundary so that one household-role permission
+primitive can serve every endpoint. Hosting that primitive in
+`chorum_murohc.identity` was rejected: the audit read API would then need
+`audit` to import `identity` while `identity` already imports `audit`, which is
+a cycle. Placing the shared HTTP concerns above every domain keeps the map
+acyclic and leaves each domain package free of endpoint code.
 
 Reverse or undeclared product-package imports are forbidden. Cross-app model
 references use Django lazy string references or `settings.AUTH_USER_MODEL`,
