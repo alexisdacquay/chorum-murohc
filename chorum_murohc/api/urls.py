@@ -8,6 +8,12 @@ from chorum_murohc.api.chores import (
     ChoreListView,
     ChoreReactivateView,
 )
+from chorum_murohc.api.members import (
+    MemberDeactivateView,
+    MemberDetailView,
+    MemberListView,
+    MemberReactivateView,
+)
 from chorum_murohc.api.session import LoginView, LogoutView, SessionView
 from chorum_murohc.api.submissions import SubmissionListView
 from chorum_murohc.api.views import health
@@ -32,6 +38,22 @@ urlpatterns = [
         name='chore-reactivate',
     ),
     path('submissions/', SubmissionListView.as_view(), name='submission-list'),
+    path('household-members/', MemberListView.as_view(), name='member-list'),
+    path(
+        'household-members/<int:pk>/',
+        MemberDetailView.as_view(),
+        name='member-detail',
+    ),
+    path(
+        'household-members/<int:pk>/deactivate/',
+        MemberDeactivateView.as_view(),
+        name='member-deactivate',
+    ),
+    path(
+        'household-members/<int:pk>/reactivate/',
+        MemberReactivateView.as_view(),
+        name='member-reactivate',
+    ),
     path('audit/', AuditEventListView.as_view(), name='audit-list'),
     path('balance/', BalanceView.as_view(), name='balance'),
     path('ledger/', LedgerHistoryView.as_view(), name='ledger-history'),
