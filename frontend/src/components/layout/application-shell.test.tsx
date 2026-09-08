@@ -115,4 +115,54 @@ describe('ApplicationShell', () => {
 
     existingFocus.remove()
   })
+  test('renders optional navigation in the banner after the product name', () => {
+    const { container, rerender } = render(
+      <ApplicationShell
+        contentKey="reference"
+        navigation={
+          <nav aria-label="Primary navigation">
+            <ul>
+              <li>
+                <a href="/chores">Chores</a>
+              </li>
+            </ul>
+          </nav>
+        }
+      >
+        <p>Shell content</p>
+      </ApplicationShell>,
+    )
+
+    const skipLink = screen.getByRole('link', { name: 'Skip to main content' })
+    const banner = screen.getByRole('banner')
+    const navigation = screen.getByRole('navigation', {
+      name: 'Primary navigation',
+    })
+    const main = screen.getByRole('main')
+
+    expect(banner.contains(navigation)).toBe(true)
+    expect(screen.getAllByRole('banner')).toHaveLength(1)
+    expect(container.querySelectorAll('main')).toHaveLength(1)
+    expect(screen.getAllByText('Chorum-murohc')).toHaveLength(1)
+    expect(
+      banner.firstElementChild?.textContent,
+    ).toBe('Chorum-murohc')
+    expect(banner.lastElementChild).toBe(navigation)
+    expect(
+      skipLink.compareDocumentPosition(navigation) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeGreaterThan(0)
+    expect(
+      navigation.compareDocumentPosition(main) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeGreaterThan(0)
+
+    rerender(
+      <ApplicationShell contentKey="reference">
+        <p>Shell content</p>
+      </ApplicationShell>,
+    )
+    expect(screen.queryByRole('navigation')).toBeNull()
+    expect(screen.getAllByRole('banner')).toHaveLength(1)
+  })
 })
