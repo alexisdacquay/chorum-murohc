@@ -2,11 +2,36 @@
 
 import { readFileSync } from 'node:fs'
 
+import { QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
-import { describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import App from './App'
+import { createQueryClient } from './api/query-client'
 import { inlineFavicon } from '../vite.config'
+
+const clients: ReturnType<typeof createQueryClient>[] = []
+
+const renderApp = () => {
+  const client = createQueryClient()
+  clients.push(client)
+  return render(
+    <QueryClientProvider client={client}>
+      <App />
+    </QueryClientProvider>,
+  )
+}
+
+beforeEach(() =>
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() => new Promise<Response>(() => undefined)),
+  ),
+)
+afterEach(() => {
+  for (const client of clients.splice(0)) client.clear()
+  vi.unstubAllGlobals()
+})
 
 const readSource = (path: string) =>
   readFileSync(new URL(path, import.meta.url), 'utf8')
@@ -59,7 +84,7 @@ const contrastRatio = (first: string, second: string) => {
 
 describe('visual-token reference page', () => {
   test('uses one main, one product heading, and labelled reference sections', () => {
-    const { container } = render(<App />)
+    const { container } = renderApp()
 
     expect(container.querySelectorAll('main')).toHaveLength(1)
     expect(screen.getAllByRole('banner')).toHaveLength(1)
@@ -82,13 +107,14 @@ describe('visual-token reference page', () => {
       'Interaction states',
       'Motion',
       'Shared interface primitives',
+      'Service connection',
     ]) {
       expect(screen.getByRole('region', { name })).toBeDefined()
     }
   })
 
   test('visibly labels every token family and non-colour state', () => {
-    render(<App />)
+    renderApp()
 
     for (const label of [
       'surface',
@@ -131,7 +157,7 @@ describe('visual-token reference page', () => {
   })
 
   test('uses shared native controls with enabled, disabled, and busy states', () => {
-    render(<App />)
+    renderApp()
 
     const primary = screen.getByRole('button', { name: 'Primary action' })
     const secondary = screen.getByRole('button', { name: 'Secondary action' })
@@ -151,7 +177,7 @@ describe('visual-token reference page', () => {
   })
 
   test('renders labelled inputs, messages, card content, and a dialog trigger', () => {
-    render(<App />)
+    renderApp()
 
     expect(
       screen.getByRole('textbox', { name: 'Household display name' }),
@@ -163,7 +189,11 @@ describe('visual-token reference page', () => {
       screen.getByRole('textbox', { name: 'Disabled example' }),
     ).toHaveProperty('disabled', true)
     expect(screen.getByRole('alert').textContent).toMatch(/^Error:/)
-    expect(screen.getByRole('status').textContent).toMatch(/^Success:/)
+    expect(
+      screen
+        .getByText('Success: Shared primitives are ready.')
+        .closest('[role="status"]'),
+    ).toBeDefined()
     expect(screen.getByRole('heading', { name: 'Composable card' })).toBeDefined()
     expect(screen.getByText('A quiet surface for grouped content.')).toBeDefined()
     expect(screen.getByRole('button', { name: 'Open reference dialog' })).toBeDefined()

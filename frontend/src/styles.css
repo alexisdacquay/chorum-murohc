@@ -607,6 +607,37 @@
     border-inline-start: var(--spacing-1) solid currentColor;
   }
 
+  .health-status,
+  .health-error {
+    display: grid;
+    min-inline-size: 0;
+    gap: var(--spacing-3);
+  }
+
+  .health-status-message,
+  .health-status > p,
+  .health-error h3,
+  .health-error p {
+    margin: 0;
+  }
+
+  .health-status-message {
+    color: var(--color-success);
+  }
+
+  .health-error {
+    padding-inline-start: var(--spacing-3);
+    border-inline-start: var(--spacing-1) solid var(--color-danger);
+  }
+
+  .health-error h3 {
+    color: var(--color-danger);
+  }
+
+  .health-error .ui-button {
+    justify-self: start;
+  }
+
   .motion-track {
     display: flex;
     min-block-size: var(--spacing-12);

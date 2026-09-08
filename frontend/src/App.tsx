@@ -1,3 +1,4 @@
+import { HealthStatus } from './components/integration/health-status'
 import { ApplicationShell } from './components/layout/application-shell'
 import { Button } from './components/ui/button'
 import {
@@ -364,6 +365,17 @@ export default function App() {
                 </Dialog>
               </div>
             </div>
+          </section>
+
+          <section
+            aria-labelledby="service-connection-heading"
+            className="token-section section-wide"
+          >
+            <div className="section-heading">
+              <h2 id="service-connection-heading">Service connection</h2>
+              <p>A direct check confirms when the service is ready.</p>
+            </div>
+            <HealthStatus />
           </section>
         </div>
       </div>
