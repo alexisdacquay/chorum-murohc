@@ -597,6 +597,26 @@ describe('RoleRouter composition slots', () => {
     )
   })
 
+  test('renders a supplied screen for its exact path only, placeholder elsewhere', () => {
+    const built = renderAt('/chore-pool', {
+      currentUser: parent,
+      screens: { '/chore-pool': <p>Built chore pool screen</p> },
+    })
+
+    expect(screen.getByText('Built chore pool screen')).toBeDefined()
+    expect(screen.queryByText('This screen is not built yet.')).toBeNull()
+    built.unmount()
+
+    renderAt('/household', {
+      currentUser: parent,
+      screens: { '/chore-pool': <p>Built chore pool screen</p> },
+    })
+    expect(screen.queryByText('Built chore pool screen')).toBeNull()
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Household',
+    )
+  })
+
   test('shows the session control in the banner only once a role resolves', () => {
     const control = <button type="button">Supplied session control</button>
 
