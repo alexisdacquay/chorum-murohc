@@ -25,6 +25,7 @@ const PARENT_LABELS = [
   'Reward requests',
   'Household',
   'Activity',
+  'Approval PIN',
 ]
 const CHILD_LABELS = ['Chores', 'Points', 'Rewards', 'Levels', 'Creature']
 
@@ -661,6 +662,7 @@ describe('the approved route table', () => {
       ['parent', '/reward-requests', 'Reward requests'],
       ['parent', '/household', 'Household'],
       ['parent', '/activity', 'Activity'],
+      ['parent', '/approval-pin', 'Approval PIN'],
       ['child', '/chores', 'Chores'],
       ['child', '/points', 'Points'],
       ['child', '/rewards', 'Rewards'],

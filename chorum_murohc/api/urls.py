@@ -14,6 +14,7 @@ from chorum_murohc.api.members import (
     MemberListView,
     MemberReactivateView,
 )
+from chorum_murohc.api.pin import PinView
 from chorum_murohc.api.redemptions import (
     RedemptionCancelView,
     RedemptionFulfilView,
@@ -36,6 +37,7 @@ urlpatterns = [
     path('auth/session/', SessionView.as_view(), name='auth-session'),
     path('auth/login/', LoginView.as_view(), name='auth-login'),
     path('auth/logout/', LogoutView.as_view(), name='auth-logout'),
+    path('auth/pin/', PinView.as_view(), name='auth-pin'),
     path('chores/', ChoreListView.as_view(), name='chore-list'),
     path('chores/<int:pk>/', ChoreDetailView.as_view(), name='chore-detail'),
     path(
