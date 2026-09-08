@@ -88,10 +88,14 @@
 > [#95](https://github.com/alexisdacquay/chorum-murohc/issues/95) must recheck
 > every item independently before the campaign closes.
 
-- [ ] Bounded login-abuse control: cap failed authentication attempts and delay
-      or lock out repeat offenders. Owner:
-      [#27](https://github.com/alexisdacquay/chorum-murohc/issues/27). Until it
-      merges, credential guessing has no bounded control.
+- [x] Bounded login-abuse control: cap failed authentication attempts and delay
+      or lock out repeat offenders. Delivered by
+      [#27](https://github.com/alexisdacquay/chorum-murohc/issues/27), merged
+      2026-09-08: 10 failed attempts per minute and 100 per hour per client
+      address, counting failures only and keyed on the address rather than the
+      submitted username. The counters are per process, so a multi-process
+      deployment still multiplies the allowance; that narrowing is owned by
+      [#128](https://github.com/alexisdacquay/chorum-murohc/issues/128).
 - [ ] Parent PIN retry limit, lockout, and recovery contract. Owner:
       [#29](https://github.com/alexisdacquay/chorum-murohc/issues/29). Until it
       merges, PIN management and approval mutations remain denied.
