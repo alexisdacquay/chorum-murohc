@@ -15,6 +15,7 @@ from chorum_murohc.api.members import (
     MemberListView,
     MemberReactivateView,
 )
+from chorum_murohc.api.overview import OverviewView
 from chorum_murohc.api.pin import PinView
 from chorum_murohc.api.progression import ProgressionAcknowledgeView, ProgressionView
 from chorum_murohc.api.redemptions import (
@@ -86,6 +87,7 @@ urlpatterns = [
         name='member-reactivate',
     ),
     path('audit/', AuditEventListView.as_view(), name='audit-list'),
+    path('overview/', OverviewView.as_view(), name='overview'),
     path('balance/', BalanceView.as_view(), name='balance'),
     path('ledger/', LedgerHistoryView.as_view(), name='ledger-history'),
     path('rewards/', RewardListView.as_view(), name='reward-list'),
