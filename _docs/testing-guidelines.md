@@ -9,7 +9,8 @@ writing or changing tests.
   effects rather than private implementation details.
 - Use the smallest test layer that proves the behaviour: a unit test for pure
   logic, a Django or API test for backend integration, a component test for UI
-  behaviour, and Playwright only for a critical cross-application journey.
+  behaviour, and a browser journey only for a critical cross-application
+  path.
 - Every bug fix should include one focused regression test that fails for the
   root cause before the fix and passes afterwards.
 - Keep tests deterministic. Control time, randomness, identifiers, and external
@@ -40,8 +41,9 @@ writing or changing tests.
 
 ## End-to-end
 
-- Use Playwright only for the bounded household journeys identified in the
-  backlog.
+- Use `browser_journeys/` only for the bounded household journeys identified
+  in the backlog. It needs no package: a pinned container serves the real API
+  and the real build on one origin, and headless Chrome drives it.
 - Give each test isolated data and make retries safe; a failed run must not
   corrupt another test or depend on execution order.
 - Keep diagnostics compact and redact passwords, PINs, cookies, and sensitive

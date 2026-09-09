@@ -40,6 +40,10 @@ agreed household rewards.
 - [Approval authentication](_docs/approval-authentication.md) - parent PIN policy
 - [Retention policy](_docs/retention-policy.md) - deactivate, edit and delete rules
 - [Roadmap](_docs/roadmap.md) - ideas intentionally deferred beyond the current scope
+- [Browser journeys](browser_journeys/README.md) - the end-to-end harness and how to run it
+- [Accessibility audit](_docs/audit-accessibility.md) - WCAG 2.2 AA findings for the current scope
+- [Security audit](_docs/audit-security.md) - security findings and the residual-risk recheck
+- [Plan verification](_docs/plan-verification.md) - requirement-by-requirement go or no-go
 
 ## Local development
 
@@ -99,6 +103,20 @@ uv run --locked ruff format --check .
 uv run --locked ruff check .
 uv run --locked pytest
 ```
+
+### Browser journeys
+
+The critical household journeys are driven in headless Chrome against the real
+API and the real build, on one origin. They need a frontend build and a
+browser, so they are a local gate rather than a CI check:
+
+```shell
+pnpm --dir frontend build
+python3 -m browser_journeys.run_journeys .
+```
+
+See [browser_journeys/README.md](browser_journeys/README.md) for the journey
+list, the isolation contract, and why this is not a CI job.
 
 ### Continuous integration and local parity
 
