@@ -71,7 +71,7 @@ def test_the_model_has_the_exact_runtime_contract():
     assert user.remote_field.on_delete is models.CASCADE
     assert user.remote_field.related_name == 'level_acknowledgements'
 
-    assert type(highest_level_shown) is models.PositiveSmallIntegerField
+    assert type(highest_level_shown) is models.IntegerField
     assert highest_level_shown.default == 0
     assert highest_level_shown.null is False
 

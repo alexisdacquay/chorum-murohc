@@ -34,7 +34,13 @@ class LevelAcknowledgement(models.Model):
         on_delete=models.CASCADE,
         related_name='level_acknowledgements',
     )
-    highest_level_shown = models.PositiveSmallIntegerField(default=0)
+    # A plain `IntegerField`, not `PositiveSmallIntegerField`: Django backs
+    # that with its own automatic, separately named database check
+    # constraint (`..._highest_level_shown_check`) on PostgreSQL, which would
+    # duplicate the exact range already enforced by the named constraint
+    # below. `submissions.Submission.chore_points` makes the same choice for
+    # the same reason.
+    highest_level_shown = models.IntegerField(default=0)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
