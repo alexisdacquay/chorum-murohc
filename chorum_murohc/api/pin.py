@@ -95,7 +95,7 @@ class PinView(APIView):
 
     def get_permission_household(self, request):
         """The one household the caller may act in, or `None`."""
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         return None if membership is None else membership.household
 
     def post(self, request):
@@ -105,7 +105,7 @@ class PinView(APIView):
         with transaction.atomic():
             # Re-resolved inside the transaction: a membership revoked a
             # moment ago cannot slip a write through.
-            membership = resolve_active_membership(request.user)
+            membership = resolve_active_membership(request.user, request)
             if membership is None or membership.role != Membership.Role.PARENT:
                 raise PermissionDenied(PERMISSION_DENIED_DETAIL)
 

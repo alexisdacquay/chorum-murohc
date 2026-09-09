@@ -134,7 +134,7 @@ class _RedemptionAPIView(APIView):
         super().initial(request, *args, **kwargs)
 
     def get_permission_household(self, request):
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         return None if membership is None else membership.household
 
 
@@ -149,7 +149,7 @@ class RedemptionListView(_RedemptionAPIView):
         return [IsHouseholdParentOrChild()]
 
     def get(self, request):
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         household = None if membership is None else membership.household
         redemptions = Redemption.objects.filter(household=household)
 
@@ -162,7 +162,7 @@ class RedemptionListView(_RedemptionAPIView):
         return Response(serializer_class(redemptions, many=True).data)
 
     def post(self, request):
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         if membership is None or membership.role != Membership.Role.CHILD:
             raise PermissionDenied(PERMISSION_DENIED_DETAIL)
 
@@ -199,7 +199,7 @@ class _RedemptionActionView(_RedemptionAPIView):
     service_fn = None
 
     def post(self, request, pk):
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         if membership is None or membership.role != Membership.Role.PARENT:
             raise PermissionDenied(PERMISSION_DENIED_DETAIL)
 

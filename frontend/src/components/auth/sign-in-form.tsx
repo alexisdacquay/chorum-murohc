@@ -24,6 +24,7 @@ import {
   login,
   sessionQueryKey,
 } from '../../api/session'
+import { replaceSession } from '../../api/query-client'
 import { Button } from '../ui/button'
 import { FormMessage } from '../ui/form-message'
 import { Input } from '../ui/input'
@@ -95,12 +96,15 @@ export function SignInForm({
       return login({ ...credentials, csrfToken })
     },
     onSuccess: (session) => {
-      // The login body is the session, so nothing is fetched again. The
-      // router sees a resolved role on this render and replaces the URL with
-      // the role start path.
+      // Drop anything cached under a previous account or household first -
+      // this device may have been signed out by the server rather than by
+      // the sign-out button, which is the only other place old screen data
+      // gets cleared. The login body is the session itself, so nothing is
+      // fetched again for it: the router sees a resolved role on this
+      // render and replaces the URL with the role start path.
       setPassword('')
       setFailure(null)
-      queryClient.setQueryData(sessionQueryKey, session)
+      replaceSession(queryClient, session)
     },
     onError: (error) => {
       // The password is never kept across a round trip that failed.

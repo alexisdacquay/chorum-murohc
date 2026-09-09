@@ -202,7 +202,7 @@ class OverviewView(APIView):
 
     def get_permission_household(self, request):
         """The one household the caller may read, or `None`."""
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         return None if membership is None else membership.household
 
     def get(self, request):

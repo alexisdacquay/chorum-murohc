@@ -1,7 +1,7 @@
 """Request serializers for the session endpoints.
 
-Only the login body needs one. Every field is write-only, so no value that
-arrives here can be echoed back in a response or in a validation error.
+Every field is write-only, so no value that arrives here can be echoed back
+in a response or in a validation error.
 """
 
 from rest_framework import serializers
@@ -23,3 +23,14 @@ class LoginSerializer(serializers.Serializer):
         write_only=True,
     )
     password = serializers.CharField(trim_whitespace=False, write_only=True)
+
+
+class HouseholdSelectionSerializer(serializers.Serializer):
+    """The household-switch request body: exactly one household id.
+
+    The id only ever selects a candidate. `chorum_murohc.api.session` still
+    confirms a live membership before the selection is honoured, so this
+    validates shape alone.
+    """
+
+    household_id = serializers.IntegerField(write_only=True)

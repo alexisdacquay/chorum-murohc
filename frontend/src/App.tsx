@@ -1,8 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { fetchSession, sessionQueryKey } from './api/session'
+import {
+  fetchHouseholds,
+  fetchSession,
+  householdsQueryKey,
+  sessionQueryKey,
+} from './api/session'
 import { ParentApprovalsScreen } from './components/approvals/parent-approvals-screen'
 import { AuditHistoryScreen } from './components/audit/audit-history-screen'
+import { HouseholdPickerScreen } from './components/auth/household-picker-screen'
+import { HouseholdSwitcher } from './components/auth/household-switcher'
 import { SignInForm } from './components/auth/sign-in-form'
 import { SignOutButton } from './components/auth/sign-out-button'
 import { ChildChoreScreen } from './components/chores/child-chore-screen'
@@ -55,6 +62,15 @@ const SCREENS = {
  * failed shows the sign-in screen with one recoverable notice, exactly as a
  * signed-out answer does, because a viewer who cannot be identified is not
  * signed in.
+ *
+ * `resolveViewerRole` in `role-router.tsx` cannot tell "no household at all"
+ * from "more than one, none selected yet" apart: both are an authenticated
+ * body with `household: null` (the household-switch issue deliberately
+ * keeps it that way - that module still owns role resolution alone). This
+ * root asks `GET auth/household/` only once it sees that shape, and if
+ * there is more than one membership to choose from, shows the picker in the
+ * router's own sign-in slot instead of the sign-in form - the same shell,
+ * the same fail-closed default the moment that answer says otherwise.
  */
 export default function App() {
   const session = useQuery({
@@ -62,20 +78,42 @@ export default function App() {
     queryFn: ({ signal }) => fetchSession({ signal }),
   })
 
+  const isAmbiguous =
+    session.data?.is_authenticated === true && session.data.household === null
+
+  const households = useQuery({
+    queryKey: householdsQueryKey,
+    queryFn: ({ signal }) => fetchHouseholds({ signal }),
+    enabled: session.data?.is_authenticated === true,
+  })
+  const pickableHouseholds = households.data ?? []
+
   return (
     <RoleRouter
       currentUser={session.data}
-      isLoading={session.isPending}
+      isLoading={session.isPending || (isAmbiguous && households.isLoading)}
       screens={SCREENS}
-      sessionControl={<SignOutButton />}
+      sessionControl={
+        <>
+          <HouseholdSwitcher
+            currentHouseholdId={session.data?.household?.id ?? null}
+            households={pickableHouseholds}
+          />
+          <SignOutButton />
+        </>
+      }
       signInScreen={
-        <SignInForm
-          isRetryingSession={session.isFetching}
-          isSessionUnavailable={session.isError}
-          onRetrySession={() => {
-            void session.refetch()
-          }}
-        />
+        isAmbiguous && pickableHouseholds.length > 1 ? (
+          <HouseholdPickerScreen households={pickableHouseholds} />
+        ) : (
+          <SignInForm
+            isRetryingSession={session.isFetching}
+            isSessionUnavailable={session.isError}
+            onRetrySession={() => {
+              void session.refetch()
+            }}
+          />
+        )
       }
     />
   )

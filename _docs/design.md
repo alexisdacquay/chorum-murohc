@@ -286,7 +286,7 @@ explicitly allowed is denied.
 | Existing `/api/v1/health/` | Allow fixed zero-data health result | Same | Same | Existing T010 and T016 contract only |
 | Login, CSRF bootstrap, signed-out session inspection | Allow only exact T027 entry points | Not applicable once authenticated | Not applicable once authenticated | T027; generic failures and no product data |
 | Current session inspection and logout | Deny authenticated data; signed-out shape only | Allow own minimum identity, active-household and role data; logout self | Same | T027; never return password, PIN, session value, or other memberships beyond its approved minimum |
-| Select or resolve active household | Deny | Allow only among own live memberships | Same | T027; zero or ambiguous unresolved context denies, and roles never union |
+| Select or resolve active household | Deny | Allow only among own live memberships | Same | T027 for resolution; issue #130 for the `GET`/`POST auth/household/` list-and-select endpoint; zero or ambiguous unresolved context denies, and roles never union |
 | View household account directory | Deny | Deny | Allow own household minimum account fields | T021; no credential, PIN, platform permission, or foreign membership data |
 | Create household account and assign product role | Deny | Deny | Allow in own household | T021; role is exactly parent or child; cannot grant staff, superuser, groups, or model permissions |
 | Edit account or product role | Deny | Deny | Allow in own household subject to last-active-parent protection | T022; self-action and stale target fail safely |

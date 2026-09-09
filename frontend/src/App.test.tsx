@@ -293,14 +293,21 @@ describe('the sign-in and sign-out journey', () => {
     expect(window.location.pathname).toBe('/overview')
     expect(document.activeElement).toBe(screen.getByRole('main'))
     // The login body became the session: one session read, one login post,
-    // then the landing overview screen's own read of its own household data.
-    await waitFor(() =>
-      expect(fetchSpy.mock.calls.map((call) => call[0])).toEqual([
+    // then the landing overview screen's own read of its own household data
+    // and the composition root's own read of the caller's household list
+    // (issue #130) - the latter two race each other, so only their order
+    // relative to the login is asserted, not against one another.
+    await waitFor(() => {
+      const calls = fetchSpy.mock.calls.map((call) => call[0])
+      expect(calls.slice(0, 2)).toEqual([
         '/api/v1/auth/session/',
         '/api/v1/auth/login/',
+      ])
+      expect([...calls.slice(2)].sort()).toEqual([
+        '/api/v1/auth/household/',
         '/api/v1/overview/',
-      ]),
-    )
+      ])
+    })
     expect(document.body.textContent).not.toContain(TEST_PASSWORD)
     expect(window.localStorage.length).toBe(0)
     expect(window.sessionStorage.length).toBe(0)
@@ -361,6 +368,122 @@ describe('the sign-in and sign-out journey', () => {
     )
     expect(window.location.pathname).toBe('/overview')
     expect(linkNames()).toEqual(PARENT_LABELS)
+  })
+})
+
+describe('switching between households', () => {
+  const AMBIGUOUS = {
+    is_authenticated: true,
+    user: { id: 7, username: TEST_USERNAME },
+    household: null,
+    role: null,
+  }
+  const CHILD_IN_HOUSEHOLD_B = {
+    is_authenticated: true,
+    user: { id: 7, username: TEST_USERNAME },
+    household: { id: 9, name: 'Household B' },
+    role: 'child',
+  }
+  const HOUSEHOLDS_LIST = {
+    households: [
+      { id: 3, name: 'Test household', role: 'parent' },
+      { id: 9, name: 'Household B', role: 'child' },
+    ],
+  }
+  const isHouseholdGet = (input: string, init?: RequestInit) =>
+    input === '/api/v1/auth/household/' && (init?.method ?? 'GET') === 'GET'
+  const isHouseholdPost = (input: string, init?: RequestInit) =>
+    input === '/api/v1/auth/household/' && init?.method === 'POST'
+
+  test('offers a picker instead of the sign-in form after logging in ambiguously', async () => {
+    fetchSpy.mockImplementation(async (input: string, init?: RequestInit) => {
+      if (input === '/api/v1/auth/login/') {
+        return jsonResponse(AMBIGUOUS)
+      }
+      if (isHouseholdPost(input, init)) {
+        return jsonResponse(PARENT)
+      }
+      if (isHouseholdGet(input, init)) {
+        return jsonResponse(HOUSEHOLDS_LIST)
+      }
+      if (input === '/api/v1/overview/') {
+        return jsonResponse(EMPTY_OVERVIEW)
+      }
+      return jsonResponse(SIGNED_OUT)
+    })
+    renderApp()
+
+    await waitFor(() => expect(screen.getByLabelText('Username')).toBeDefined())
+    fireEvent.change(screen.getByLabelText('Username'), {
+      target: { value: TEST_USERNAME },
+    })
+    fireEvent.change(screen.getByLabelText('Password'), {
+      target: { value: TEST_PASSWORD },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('heading', { name: 'Choose a household' }),
+      ).toBeDefined(),
+    )
+    expect(screen.queryByRole('navigation')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Test household' })).toBeDefined()
+    expect(screen.getByRole('button', { name: 'Household B' })).toBeDefined()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Test household' }))
+
+    await waitFor(() => expect(linkNames()).toEqual(PARENT_LABELS))
+    expect(window.location.pathname).toBe('/overview')
+    expect(screen.queryByText('Household B')).toBeNull()
+  })
+
+  test('switches from the banner control and never unions the two roles', async () => {
+    fetchSpy.mockImplementation(async (input: string, init?: RequestInit) => {
+      if (isHouseholdPost(input, init)) {
+        return jsonResponse(CHILD_IN_HOUSEHOLD_B)
+      }
+      if (isHouseholdGet(input, init)) {
+        return jsonResponse(HOUSEHOLDS_LIST)
+      }
+      if (input === '/api/v1/overview/') {
+        return jsonResponse(EMPTY_OVERVIEW)
+      }
+      return jsonResponse(PARENT)
+    })
+    renderApp()
+
+    await waitFor(() => expect(linkNames()).toEqual(PARENT_LABELS))
+    const switcher = await screen.findByLabelText('Switch household')
+    expect(
+      within(switcher).getAllByRole('option').map((option) => option.textContent),
+    ).toEqual(['Test household', 'Household B'])
+
+    fireEvent.change(switcher, { target: { value: '9' } })
+
+    await waitFor(() => expect(linkNames()).toEqual(CHILD_LABELS))
+    // The previous household's own screen and its parent-only nav are both
+    // gone - not merely hidden - so no cached parent data can leak through.
+    for (const label of PARENT_LABELS) {
+      expect(screen.queryByRole('link', { name: label })).toBeNull()
+    }
+    expect(screen.queryByText(/No children in this household yet/)).toBeNull()
+  })
+
+  test('hides the switcher for a viewer with only one household', async () => {
+    fetchSpy.mockImplementation(async (input: string, init?: RequestInit) => {
+      if (isHouseholdGet(input, init)) {
+        return jsonResponse({ households: [] })
+      }
+      if (input === '/api/v1/overview/') {
+        return jsonResponse(EMPTY_OVERVIEW)
+      }
+      return jsonResponse(PARENT)
+    })
+    renderApp()
+
+    await waitFor(() => expect(linkNames()).toEqual(PARENT_LABELS))
+    expect(screen.queryByLabelText('Switch household')).toBeNull()
   })
 })
 
