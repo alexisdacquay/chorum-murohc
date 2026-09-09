@@ -104,7 +104,9 @@
 - [ ] Database-layer defence in depth for audit immutability and household
       isolation, including whether to adopt row-level security or tamper
       evidence. Application code alone enforces both today and privileged
-      database access is trusted. Owner:
+      database access is trusted. Parked by the product owner on 2026-09-09;
+      it is not current implementation scope. If revisited, open a new issue
+      naming one specific database control. Historical decision record:
       [#123](https://github.com/alexisdacquay/chorum-murohc/issues/123).
 - [ ] Second authentication factor or single sign-on. Session cookies are the
       only authentication factor today. No owner yet; adoption needs its own
