@@ -10,8 +10,8 @@ are removed when the run ends, and nothing is installed on the machine.
     pnpm --dir frontend build          # the journeys drive the real build
     python3 -m browser_journeys.run_journeys /path/to/worktree
 
-Add journey names to run a subset, and `--chrome` to point at a browser
-somewhere other than the default path.
+Add journey names to run a subset. The runner discovers Chrome or Chromium
+from PATH and common local installations; use `--chrome` for another path.
 """
 
 import argparse
@@ -34,7 +34,15 @@ IMAGE = (
     'a58daefb915e1e03ad48f3ca4df8832065412c5c35cacb9d39f4229184de12b6'
 )
 UV_VERSION = '0.12.10'
-DEFAULT_CHROME = '/home/hermes/.agent-browser/browsers/chrome-149.0.7827.115/chrome'
+CHROME_COMMANDS = (
+    'google-chrome',
+    'google-chrome-stable',
+    'chromium',
+    'chromium-browser',
+)
+STANDARD_CHROME_PATHS = (
+    Path('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'),
+)
 JOURNEYS = (
     'smoke',
     'child-submission',
@@ -59,6 +67,34 @@ CONTAINER_COMMAND = (
     'exec uv run --locked --no-env-file python -m browser_journeys.serve_app '
     '{port} {token}'
 )
+
+
+def browser_file_candidates():
+    """Yield host browser locations that are not normally exposed on PATH."""
+    yield from STANDARD_CHROME_PATHS
+    managed_browsers = Path.home() / '.agent-browser' / 'browsers'
+    yield from sorted(managed_browsers.glob('chrome-*/chrome'), reverse=True)
+
+
+def discover_chrome(commands=CHROME_COMMANDS, file_candidates=None):
+    """Return the first usable Chrome or Chromium path on this host."""
+    for command in commands:
+        resolved = shutil.which(command)
+        if resolved and Path(resolved).is_file():
+            return resolved
+
+    candidates = (
+        browser_file_candidates() if file_candidates is None else file_candidates
+    )
+    for candidate in candidates:
+        if Path(candidate).is_file():
+            return str(candidate)
+    return None
+
+
+def default_uv_cache():
+    """Return a writable host-neutral cache for disposable journey runs."""
+    return Path(tempfile.gettempdir()) / 'chorum-murohc-uv-cache'
 
 
 def free_port():
@@ -251,10 +287,14 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('worktree', help='the checkout to run, with a built frontend')
     parser.add_argument('journeys', nargs='*', default=None, help='names to run')
-    parser.add_argument('--chrome', default=DEFAULT_CHROME)
+    parser.add_argument(
+        '--chrome',
+        default=None,
+        help='browser executable; otherwise discover Chrome or Chromium',
+    )
     parser.add_argument(
         '--uv-cache',
-        default='/home/hermes/work/.chorum-uv-cache',
+        default=str(default_uv_cache()),
         help='a directory to keep the container install cache in',
     )
     arguments = parser.parse_args(argv)
@@ -266,8 +306,12 @@ def main(argv=None):
             file=sys.stderr,
         )
         return 2
-    if not Path(arguments.chrome).is_file():
-        print(f'no browser at {arguments.chrome}', file=sys.stderr)
+    chrome = arguments.chrome or discover_chrome()
+    if chrome is None:
+        print('no browser found; pass --chrome PATH', file=sys.stderr)
+        return 2
+    if not Path(chrome).is_file():
+        print(f'no browser at {chrome}', file=sys.stderr)
         return 2
 
     selected = arguments.journeys or list(DEFAULT_JOURNEYS)
@@ -287,7 +331,7 @@ def main(argv=None):
         secrets_in_play = secret_values(dataset)
         print(f'harness ready on {base_url} for run {dataset["token"]}')
         for journey in selected:
-            report = run_journey(arguments.chrome, base_url, journey)
+            report = run_journey(chrome, base_url, journey)
             text = describe(report)
             leaked = leaked_secrets(text, secrets_in_play)
             if leaked:
