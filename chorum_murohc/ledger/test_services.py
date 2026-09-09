@@ -21,7 +21,11 @@ from chorum_murohc.audit.models import AuditEvent
 from chorum_murohc.identity.models import Household, Membership, User
 from chorum_murohc.ledger import services as services_module
 from chorum_murohc.ledger.models import LedgerEntry
-from chorum_murohc.ledger.services import balance_for_user, ledger_history_for_user
+from chorum_murohc.ledger.services import (
+    balance_for_user,
+    ledger_history_for_user,
+    lifetime_points_earned_for_user,
+)
 
 INSTANT = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
 
@@ -138,6 +142,46 @@ def test_the_balance_is_one_aggregate_query(
         assert balance_for_user(household_a, child_a) == 65
 
 
+# Lifetime points earned (issue #61's levelling policy)
+
+
+def test_lifetime_points_is_the_sum_of_credits_only(household_a, child_a):
+    make_entry(household_a, child_a, 25, offset=0)
+    make_entry(household_a, child_a, 40, reason=LedgerEntry.Reason.INTEREST, offset=1)
+
+    assert lifetime_points_earned_for_user(household_a, child_a) == 65
+
+
+def test_a_debit_never_lowers_lifetime_points(household_a, child_a):
+    make_entry(household_a, child_a, 100, offset=0)
+    make_entry(
+        household_a, child_a, -60, reason=LedgerEntry.Reason.REWARD_DEBIT, offset=1
+    )
+
+    assert balance_for_user(household_a, child_a) == 40
+    assert lifetime_points_earned_for_user(household_a, child_a) == 100
+
+
+def test_no_entry_at_all_is_zero_lifetime_points_and_never_none(household_a, child_a):
+    lifetime_points = lifetime_points_earned_for_user(household_a, child_a)
+
+    assert lifetime_points == 0
+    assert lifetime_points is not None
+    assert isinstance(lifetime_points, int)
+
+
+def test_lifetime_points_is_scoped_to_the_named_user_and_household(
+    household_a, household_b, child_a, sibling_a
+):
+    make_entry(household_a, child_a, 25, offset=0)
+    make_entry(household_a, sibling_a, 900, offset=1)
+    make_entry(household_b, child_a, 900, offset=2)
+
+    assert lifetime_points_earned_for_user(household_a, child_a) == 25
+    assert lifetime_points_earned_for_user(household_a, sibling_a) == 900
+    assert lifetime_points_earned_for_user(household_b, child_a) == 900
+
+
 # History
 
 
@@ -190,6 +234,7 @@ def test_reading_writes_nothing(household_a, child_a):
 
     balance_for_user(household_a, child_a)
     list(ledger_history_for_user(household_a, child_a))
+    lifetime_points_earned_for_user(household_a, child_a)
 
     assert list(LedgerEntry.objects.values_list('pk', flat=True)) == before
     assert AuditEvent.objects.count() == 0
