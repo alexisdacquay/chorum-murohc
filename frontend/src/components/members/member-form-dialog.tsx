@@ -1,8 +1,15 @@
 /**
  * The create and edit form for one household member, shared by both because
- * the two differ only in which request they send, whether a password is
- * required, and what their title says - the same shape `chore-form-dialog.tsx`
- * uses for a chore.
+ * the two differ only in which request they send, which fields they show,
+ * and what their title says - the same shape `chore-form-dialog.tsx` uses
+ * for a chore.
+ *
+ * Only create sets a password here: an edit that could quietly change
+ * someone else's password would undercut the proof
+ * `reset-member-password-dialog.tsx` requires for exactly that action
+ * (issue #129), so this form's edit mode never sends one. It also never
+ * touches the caller's own account - `household-screen.tsx` hides every
+ * action, this dialog included, on the caller's own row.
  *
  * Validated twice: locally first, so an obviously bad value never leaves the
  * browser, and again by the server, whose taken-username and password-
@@ -114,9 +121,6 @@ export function MemberFormDialog({
             id: (member as Member).id,
             username: values.username,
             role: values.role,
-            // A blank field means "keep the current password": the key is
-            // left out of the request entirely rather than sent empty.
-            ...(values.password === '' ? {} : { password: values.password }),
           })
     },
     onSuccess: (saved) => onSaved(saved),
@@ -209,30 +213,26 @@ export function MemberFormDialog({
               {fieldErrors.username ?? ''}
             </FormMessage>
           </div>
-          <div className="chore-form-field">
-            <label className="auth-label" htmlFor={passwordId}>
-              {mode === 'create' ? 'Password' : 'New password'}
-            </label>
-            <Input
-              aria-describedby={passwordMessageId}
-              aria-invalid={fieldErrors.password !== undefined ? 'true' : undefined}
-              autoComplete="new-password"
-              id={passwordId}
-              onChange={(event) => setPassword(event.target.value)}
-              ref={passwordField}
-              type="password"
-              value={password}
-            />
-            {mode === 'edit' && fieldErrors.password === undefined ? (
-              <FormMessage id={passwordMessageId} tone="help">
-                Leave blank to keep the current password.
-              </FormMessage>
-            ) : (
+          {mode === 'create' ? (
+            <div className="chore-form-field">
+              <label className="auth-label" htmlFor={passwordId}>
+                Password
+              </label>
+              <Input
+                aria-describedby={passwordMessageId}
+                aria-invalid={fieldErrors.password !== undefined ? 'true' : undefined}
+                autoComplete="new-password"
+                id={passwordId}
+                onChange={(event) => setPassword(event.target.value)}
+                ref={passwordField}
+                type="password"
+                value={password}
+              />
               <FormMessage id={passwordMessageId} role="alert" tone="error">
                 {fieldErrors.password ?? ''}
               </FormMessage>
-            )}
-          </div>
+            </div>
+          ) : null}
           <div className="chore-form-field">
             <label className="auth-label" htmlFor={roleId}>
               Role

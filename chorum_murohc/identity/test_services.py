@@ -27,16 +27,20 @@ from chorum_murohc.identity.models import Household, Membership, ParentPin, User
 from chorum_murohc.identity.services import (
     LOCKOUT_DURATION,
     MAX_FAILED_ATTEMPTS,
+    PASSWORD_CHANGE_ACTION,
     PIN_CHANGE_ACTION,
     PIN_LOCKED_ACTION,
     PIN_MAX_LENGTH,
     PIN_MIN_LENGTH,
     PIN_SET_ACTION,
     PIN_VERIFY_FAILED_ACTION,
+    PasswordMismatchError,
+    PasswordWeakError,
     PinFormatError,
     PinPasswordError,
     PinVerificationResult,
     PinWeakError,
+    change_own_password,
     set_or_replace_pin,
     verify_pin,
 )
@@ -597,6 +601,95 @@ def test_concurrent_failures_never_lose_an_increment(household, parent):
     assert sorted(result.value for result in results) == ['no_match', 'no_match']
     assert ParentPin.objects.get(user=parent).failed_attempts == 2
     assert AuditEvent.objects.filter(action=PIN_VERIFY_FAILED_ACTION).count() == 2
+
+
+# change_own_password
+
+
+@pytest.mark.django_db
+def test_a_wrong_current_password_is_refused_and_the_password_is_unchanged(
+    household, parent
+):
+    with pytest.raises(PasswordMismatchError):
+        change_own_password(
+            user=parent,
+            household=household,
+            current_password='not-the-real-password',
+            new_password='a genuinely unusual passphrase 42',
+        )
+
+    parent.refresh_from_db()
+    assert parent.check_password(SYNTHETIC_PASSWORD) is True
+    assert AuditEvent.objects.count() == 0
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('weak_password', ('short', 'password', '11111111'))
+def test_a_weak_new_password_is_refused_and_the_password_is_unchanged(
+    household, parent, weak_password
+):
+    with pytest.raises(PasswordWeakError) as excinfo:
+        change_own_password(
+            user=parent,
+            household=household,
+            current_password=SYNTHETIC_PASSWORD,
+            new_password=weak_password,
+        )
+
+    assert len(excinfo.value.messages) > 0
+    parent.refresh_from_db()
+    assert parent.check_password(SYNTHETIC_PASSWORD) is True
+    assert AuditEvent.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_a_successful_change_stores_the_new_password_hashed_and_writes_one_event(
+    household, parent
+):
+    new_password = 'a genuinely unusual passphrase 42'
+    before = timezone.now()
+
+    change_own_password(
+        user=parent,
+        household=household,
+        current_password=SYNTHETIC_PASSWORD,
+        new_password=new_password,
+    )
+
+    parent.refresh_from_db()
+    assert parent.check_password(new_password) is True
+    assert parent.check_password(SYNTHETIC_PASSWORD) is False
+    assert_withholds(parent.password, new_password)
+
+    events = list(AuditEvent.objects.all())
+    assert len(events) == 1
+    event = events[0]
+    assert event.household == household
+    assert event.actor == parent
+    assert event.action == PASSWORD_CHANGE_ACTION
+    assert event.target_type == 'identity.User'
+    assert event.target_id == str(parent.pk)
+    assert event.context == {}
+    assert before <= event.created_at <= timezone.now()
+
+
+@pytest.mark.django_db
+def test_changing_one_parents_password_never_touches_another_parents(
+    household, parent, other_parent
+):
+    change_own_password(
+        user=parent,
+        household=household,
+        current_password=SYNTHETIC_PASSWORD,
+        new_password='a genuinely unusual passphrase 42',
+    )
+
+    other_parent.refresh_from_db()
+    assert other_parent.check_password(SYNTHETIC_OTHER_PASSWORD) is True
+
+    events = list(AuditEvent.objects.filter(action=PASSWORD_CHANGE_ACTION))
+    assert len(events) == 1
+    assert events[0].actor == parent
 
 
 # What this task is not allowed to introduce

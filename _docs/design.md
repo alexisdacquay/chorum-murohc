@@ -292,6 +292,8 @@ explicitly allowed is denied.
 | Edit account or product role | Deny | Deny | Allow in own household subject to last-active-parent protection | T022; self-action and stale target fail safely |
 | Remove, deactivate, or anonymise account | Deny | Deny | Deny until approved retention policy, then only the exact own-household transition | T020, T023; never remove the last active parent |
 | Set or replace parent PIN | Deny | Deny | Allow own PIN only after the exact T029 and T031 proof and recovery contract | T029 to T033; never read a PIN or hash and never manage another parent's PIN |
+| Change own account password | Deny | Not applicable to this issue: no self-service password change for a child | Allow own account only after re-entering their own current password | Issue #129; self-action only, never targets another user |
+| Reset another household member's password | Deny | Deny | Allow own household, never the actor's own account, only after the acting parent's own PIN or account password verifies in the same request | Issue #129; resetting a parent target also clears that parent's PIN and lockout per `_docs/approval-authentication.md` |
 | List active chores | Deny | Allow active own-household chores | Allow own-household chores needed for management | T035 |
 | Create, edit, remove, or deactivate chores | Deny | Deny | Allow own household subject to approved retention rules | T020, T034, T035; child denial is absolute |
 | Submit completed chore attestation | Deny | Allow for self and an active own-household chore only after T040 policy | Deny | T040 to T042; cannot submit for another child or before explicit attestation |

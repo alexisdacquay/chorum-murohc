@@ -1,4 +1,5 @@
-"""Set, replace, and verify a parent's approval PIN (T030, issue #30).
+"""Set, replace, and verify a parent's approval PIN (T030, issue #30); change
+a user's own account password (issue #129).
 
 Implements the storage and verification half of the approved contract in
 `_docs/approval-authentication.md`. This module is the only place that ever
@@ -7,7 +8,7 @@ result back, never the hash itself, and the raw PIN is never logged, stored,
 or placed in an audit event's context (redaction in `audit.models` is
 defence in depth, not permission to rely on it here).
 
-Two operations:
+Two PIN operations:
 
 - `set_or_replace_pin` creates a parent's first PIN or replaces an existing
   one. It requires the parent's current account password in the same call
@@ -26,6 +27,18 @@ Two operations:
 This module has no HTTP endpoint of its own for `verify_pin`: the approval
 flow that will call it (T045 to T047) is a later task. The versioned HTTP
 API layer's PIN view calls `set_or_replace_pin` only.
+
+One password operation:
+
+- `change_own_password` changes the caller's own account password, gated on
+  the caller's current password and Django's configured strength validators,
+  the same shape as `set_or_replace_pin`. It has one caller: the versioned
+  HTTP API layer's own password-change view. Resetting a *different*
+  household member's forgotten password is a directory action, not a
+  self-service one: it is owned by the account-directory API module, which is
+  already the one place that mutates another member's account, and which
+  calls `verify_pin` here for the PIN half of its own two-factor check
+  (issue #129: "the parent PIN or password").
 """
 
 import re
@@ -34,6 +47,8 @@ from enum import Enum
 from itertools import pairwise
 
 from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
 
@@ -50,6 +65,7 @@ PIN_SET_ACTION = 'pin.set'
 PIN_CHANGE_ACTION = 'pin.change'
 PIN_VERIFY_FAILED_ACTION = 'pin.verify_failed'
 PIN_LOCKED_ACTION = 'pin.locked'
+PASSWORD_CHANGE_ACTION = 'password.change'
 
 _AUDIT_TARGET_TYPE = 'identity.User'
 
@@ -96,6 +112,24 @@ class PinFormatError(Exception):
 
 class PinWeakError(Exception):
     """The PIN was refused as too guessable, or matched the current one."""
+
+
+class PasswordMismatchError(Exception):
+    """The supplied current account password did not match."""
+
+
+class PasswordWeakError(Exception):
+    """The new password failed one of Django's configured validators.
+
+    Carries `.messages`, the validator's own list of reasons, unlike the PIN
+    errors above: a password's strength rules are not a secret the way a PIN
+    guess's closeness is, and `MemberCreateSerializer` already shows a new
+    account's own password errors this same way.
+    """
+
+    def __init__(self, messages):
+        super().__init__('weak password')
+        self.messages = messages
 
 
 class PinVerificationResult(Enum):
@@ -274,4 +308,40 @@ def verify_pin(*, user, household, submitted_pin):
             PinVerificationResult.LOCKED
             if newly_locked
             else PinVerificationResult.NO_MATCH
+        )
+
+
+def change_own_password(*, user, household, current_password, new_password):
+    """Change `user`'s own account password.
+
+    `household` is used only to attribute the audit event, exactly like
+    `set_or_replace_pin`; the password itself belongs to the user account,
+    not to a household. Raises `PasswordMismatchError` when `current_password`
+    does not match the account, and `PasswordWeakError` (carrying Django's own
+    validator messages) when `new_password` fails a configured validator.
+
+    This only ever runs for the caller's own account (issue #129: "require
+    the acting parent's current password for their own change"), so it never
+    touches another user's PIN or lockout state - unlike a reset of someone
+    else's password, which `_docs/approval-authentication.md` requires to
+    clear the target's PIN too, and which the account-directory API module
+    handles instead.
+    """
+    if not user.check_password(current_password):
+        raise PasswordMismatchError
+
+    try:
+        validate_password(new_password, user=user)
+    except DjangoValidationError as error:
+        raise PasswordWeakError(error.messages) from error
+
+    with transaction.atomic():
+        user.set_password(new_password)
+        user.save(update_fields=('password',))
+        _write_audit_event(
+            household=household,
+            actor=user,
+            action=PASSWORD_CHANGE_ACTION,
+            user=user,
+            context={},
         )

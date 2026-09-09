@@ -14,6 +14,7 @@ import { PointsDashboardScreen } from './components/points/points-dashboard-scre
 import { LevelsScreen } from './components/progression/levels-screen'
 import { ChildRewardsScreen } from './components/rewards/child-rewards-screen'
 import { ParentRewardsScreen } from './components/rewards/parent-rewards-screen'
+import { PasswordSettingsScreen } from './components/settings/password-settings-screen'
 import { PinSettingsScreen } from './components/settings/pin-settings-screen'
 import { RoleRouter } from './navigation/role-router'
 
@@ -22,8 +23,9 @@ import { RoleRouter } from './navigation/role-router'
 // #30 owns `/approval-pin`; issue #55 owns `/rewards` and
 // `/reward-requests`; issue #61 owns `/levels`; issue #49 owns `/points`;
 // issue #66 owns `/creature`; issue #44 owns `/approvals`; issue #84 owns
-// `/overview` and `/activity`). Every other approved path still falls back
-// to the router's own neutral placeholder.
+// `/overview` and `/activity`; issue 129 owns `/change-password`). Every
+// other approved path still falls back to the router's own neutral
+// placeholder.
 const SCREENS = {
   '/activity': <AuditHistoryScreen />,
   '/approvals': <ParentApprovalsScreen />,
@@ -32,6 +34,7 @@ const SCREENS = {
   '/household': <HouseholdScreen />,
   '/overview': <ParentOverviewScreen />,
   '/approval-pin': <PinSettingsScreen />,
+  '/change-password': <PasswordSettingsScreen />,
   '/points': <PointsDashboardScreen />,
   '/rewards': <ChildRewardsScreen />,
   '/reward-requests': <ParentRewardsScreen />,

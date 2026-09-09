@@ -1,10 +1,12 @@
 /**
- * The household account directory API client (issue #21).
+ * The household account directory API client (issue #21; reset-password is
+ * issue #129).
  *
- * Seven routes under `/api/v1/household-members/`, parent-only for every
- * one of them including the list - unlike `api/chores.ts`, there is no
+ * Eight routes under `/api/v1/household-members/`, parent-only for every one
+ * of them including the list - unlike `api/chores.ts`, there is no
  * child-visible shape here at all. This client is used only from the parent
- * household screen.
+ * household screen. Changing the caller's *own* password is a different
+ * route entirely: `api/password.ts`.
  *
  * Same-origin session authentication and CSRF only, matching `api/session.ts`
  * exactly: `ensureCsrfToken` and the CSRF header it exports are reused here
@@ -226,31 +228,26 @@ export const createMember = async ({
   )
 
 /**
- * `PATCH /api/v1/household-members/<id>/`: edit a member.
+ * `PATCH /api/v1/household-members/<id>/`: edit a member's username or role.
  *
- * Each of `username`, `password` and `role` is sent only when the caller
- * supplies it, so leaving the password field blank in the edit form leaves
- * the stored password untouched rather than sending an empty one.
+ * Each field is sent only when the caller supplies it. There is no password
+ * field here: setting someone else's password needs its own proof, so it is
+ * `resetMemberPassword` below, not a plain edit.
  */
 export const updateMember = async ({
   csrfToken,
   id,
   username,
-  password,
   role,
   signal,
 }: WriteArgs & {
   id: number
   username?: string
-  password?: string
   role?: MemberRole
 }): Promise<Member> => {
   const body: Record<string, string> = {}
   if (username !== undefined) {
     body.username = username
-  }
-  if (password !== undefined) {
-    body.password = password
   }
   if (role !== undefined) {
     body.role = role
@@ -259,6 +256,51 @@ export const updateMember = async ({
   return readMemberBody(
     await send(`/api/v1/household-members/${id}/`, {
       method: 'PATCH',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        [CSRF_HEADER_NAME]: csrfToken,
+      },
+      body: JSON.stringify(body),
+      signal,
+    }),
+  )
+}
+
+/**
+ * `POST /api/v1/household-members/<id>/reset-password/`: set a new password
+ * for a member who is not the caller.
+ *
+ * Exactly one of `pin` or `password` proves it is really the acting parent,
+ * on top of the session that already proves they are a parent of this
+ * household. Sending neither, or both, is a local error the caller should
+ * catch before this ever reaches the network; the server refuses it either
+ * way.
+ */
+export const resetMemberPassword = async ({
+  csrfToken,
+  id,
+  newPassword,
+  pin,
+  password,
+  signal,
+}: WriteArgs & {
+  id: number
+  newPassword: string
+  pin?: string
+  password?: string
+}): Promise<Member> => {
+  const body: Record<string, string> = { new_password: newPassword }
+  if (pin !== undefined) {
+    body.pin = pin
+  }
+  if (password !== undefined) {
+    body.password = password
+  }
+
+  return readMemberBody(
+    await send(`/api/v1/household-members/${id}/reset-password/`, {
+      method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',

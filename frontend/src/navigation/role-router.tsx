@@ -66,7 +66,7 @@ const SIGN_IN_PATH = '/sign-in'
  * Screen owners, recorded here rather than in the interface: /overview #85,
  * /approvals #48, /chore-pool #37, /household #24, /activity #87, /chores
  * #36, /points #49, /rewards #58, /levels #65, /creature #83, /sign-in #28,
- * /approval-pin #30.
+ * /approval-pin #30, /change-password #129.
  * /reward-requests is the one addition issue #55 makes: the parent side of
  * the merged rewards feature (fulfil, cancel, and catalogue management) has
  * no earlier route to extend, and cannot share child-only `/rewards`, since
@@ -83,6 +83,7 @@ export const ROUTE_TABLE: readonly RouteEntry[] = [
   { path: '/household', label: 'Household', role: 'parent' },
   { path: '/activity', label: 'Activity', role: 'parent' },
   { path: '/approval-pin', label: 'Approval PIN', role: 'parent' },
+  { path: '/change-password', label: 'Change password', role: 'parent' },
   { path: '/chores', label: 'Chores', role: 'child' },
   { path: '/points', label: 'Points', role: 'child' },
   { path: '/rewards', label: 'Rewards', role: 'child' },
