@@ -40,6 +40,7 @@ const PARENT = {
   role: 'parent',
 }
 const CHILD = { ...PARENT, user: { id: 8, username: 'test-child' }, role: 'child' }
+const EMPTY_OVERVIEW = { children: [], parents: [], pending_total: 0 }
 
 let fetchSpy: ReturnType<typeof vi.fn>
 
@@ -267,11 +268,15 @@ describe('the current session on load', () => {
 
 describe('the sign-in and sign-out journey', () => {
   test('signs a parent in from the form and moves focus to main', async () => {
-    fetchSpy.mockImplementation(async (input: string) =>
-      input === '/api/v1/auth/login/'
-        ? jsonResponse(PARENT)
-        : jsonResponse(SIGNED_OUT),
-    )
+    fetchSpy.mockImplementation(async (input: string) => {
+      if (input === '/api/v1/auth/login/') {
+        return jsonResponse(PARENT)
+      }
+      if (input === '/api/v1/overview/') {
+        return jsonResponse(EMPTY_OVERVIEW)
+      }
+      return jsonResponse(SIGNED_OUT)
+    })
     renderApp()
 
     await waitFor(() => expect(screen.getByLabelText('Username')).toBeDefined())
@@ -286,11 +291,15 @@ describe('the sign-in and sign-out journey', () => {
     await waitFor(() => expect(linkNames()).toEqual(PARENT_LABELS))
     expect(window.location.pathname).toBe('/overview')
     expect(document.activeElement).toBe(screen.getByRole('main'))
-    // The login body became the session: one session read, one login post.
-    expect(fetchSpy.mock.calls.map((call) => call[0])).toEqual([
-      '/api/v1/auth/session/',
-      '/api/v1/auth/login/',
-    ])
+    // The login body became the session: one session read, one login post,
+    // then the landing overview screen's own read of its own household data.
+    await waitFor(() =>
+      expect(fetchSpy.mock.calls.map((call) => call[0])).toEqual([
+        '/api/v1/auth/session/',
+        '/api/v1/auth/login/',
+        '/api/v1/overview/',
+      ]),
+    )
     expect(document.body.textContent).not.toContain(TEST_PASSWORD)
     expect(window.localStorage.length).toBe(0)
     expect(window.sessionStorage.length).toBe(0)
@@ -334,6 +343,9 @@ describe('the sign-in and sign-out journey', () => {
       if (input === '/api/v1/auth/logout/') {
         throw new Error('offline')
       }
+      if (input === '/api/v1/overview/') {
+        return jsonResponse(EMPTY_OVERVIEW)
+      }
       return jsonResponse(PARENT)
     })
     renderApp()
@@ -366,6 +378,37 @@ describe('the chore pool screen', () => {
     )
     expect(window.location.pathname).toBe('/chore-pool')
     expect(screen.queryByText('This screen is not built yet.')).toBeNull()
+  })
+})
+
+describe('the overview screen and its quick links', () => {
+  test('a parent lands on the overview and its quick link reaches chore pool without a reload', async () => {
+    fetchSpy.mockImplementation(async (input: string) => {
+      if (input === '/api/v1/overview/') {
+        return jsonResponse(EMPTY_OVERVIEW)
+      }
+      if (input === '/api/v1/chores/') {
+        return jsonResponse([])
+      }
+      return jsonResponse(PARENT)
+    })
+    renderApp()
+
+    await waitFor(() =>
+      expect(screen.getByText(/No children in this household yet/)).toBeDefined(),
+    )
+    const quickLink = screen.getByRole('link', { name: 'Manage chores' })
+    expect(quickLink.getAttribute('href')).toBe('/chore-pool')
+
+    fireEvent.click(quickLink)
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Add chore' })).toBeDefined(),
+    )
+    expect(window.location.pathname).toBe('/chore-pool')
+    // Reached through the app's own history push, not a full navigation:
+    // the parent nav (present only once the app has mounted) is still there.
+    expect(linkNames()).toEqual(PARENT_LABELS)
   })
 })
 
