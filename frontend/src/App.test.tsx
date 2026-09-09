@@ -24,6 +24,7 @@ const PARENT_LABELS = [
   'Household',
   'Activity',
   'Approval PIN',
+  'Change password',
 ]
 const CHILD_LABELS = ['Chores', 'Points', 'Rewards', 'Levels', 'Creature']
 
@@ -424,6 +425,24 @@ describe('the approval PIN screen', () => {
       expect(screen.getByRole('button', { name: 'Save PIN' })).toBeDefined(),
     )
     expect(window.location.pathname).toBe('/approval-pin')
+    expect(screen.queryByText('This screen is not built yet.')).toBeNull()
+  })
+})
+
+describe('the change password screen', () => {
+  test('a parent who follows the Change password link reaches the built screen', async () => {
+    fetchSpy.mockResolvedValue(jsonResponse(PARENT))
+    renderApp()
+
+    await waitFor(() => expect(linkNames()).toEqual(PARENT_LABELS))
+    fireEvent.click(screen.getByRole('link', { name: 'Change password' }))
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('heading', { level: 1, name: 'Change password' }),
+      ).toBeDefined(),
+    )
+    expect(window.location.pathname).toBe('/change-password')
     expect(screen.queryByText('This screen is not built yet.')).toBeNull()
   })
 })

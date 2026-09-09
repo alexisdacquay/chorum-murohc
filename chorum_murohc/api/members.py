@@ -1,7 +1,7 @@
-"""Household account directory: list, create, edit, deactivate, reactivate
-and delete the accounts of one household.
+"""Household account directory: list, create, edit, deactivate, reactivate,
+delete and reset the password of the accounts of one household.
 
-Seven routes under `/api/v1/household-members/`, all same-origin session
+Eight routes under `/api/v1/household-members/`, all same-origin session
 authenticated, parent-only and scoped to the one household the caller is a
 live parent of. Unlike the chore pool, a child is denied every route here,
 including read: the permission matrix in `_docs/design.md` marks the whole
@@ -15,6 +15,13 @@ directory "Deny" for a child.
   one member. `<pk>` is the target user's id, not a membership row id.
 - `POST household-members/<pk>/deactivate/` and `.../reactivate/` move a
   member between the two login states.
+- `POST household-members/<pk>/reset-password/` sets a new password for a
+  member who is not the caller (issue #129: "a parent must be able to reset
+  another household member's password"). It is deliberately not part of the
+  plain edit above: setting someone else's password needs its own proof, so
+  it requires the acting parent's own PIN or account password in the same
+  request, on top of the parent-of-this-household check every route here
+  already makes. `MemberPasswordResetView` owns the detail.
 
 This task adds no model and no migration. `identity.User` and
 `identity.Membership` already carry every field the contract needs -
@@ -23,8 +30,9 @@ built entirely from the existing schema.
 
 `_docs/retention-policy.md`, "Who may act", governs every mutation here:
 only a live parent of the target's household may act, and the actor may
-never act on their own account through this API - self-service belongs to a
-future settings screen, not this one. A household must always keep one
+never act on their own account through this API - self-service password
+change is `chorum_murohc.api.password.PasswordChangeView`, and self-service
+edit of username or role remains unbuilt. A household must always keep one
 active parent; deactivating, deleting or demoting the last one denies inside
 the same transaction as the write it guards.
 
@@ -59,15 +67,16 @@ from rest_framework.views import APIView
 from chorum_murohc.api.permissions import PERMISSION_DENIED_DETAIL, IsHouseholdParent
 from chorum_murohc.api.session import resolve_active_membership
 from chorum_murohc.audit.models import AuditEvent
-from chorum_murohc.identity.models import Membership, User
+from chorum_murohc.identity.models import Membership, ParentPin, User
+from chorum_murohc.identity.services import PinVerificationResult, verify_pin
 from chorum_murohc.ledger.models import LedgerEntry
 from chorum_murohc.submissions.models import Submission
 
-# The audit target these endpoints write, and the six codes the retention
-# policy lists for an account. An edit that changes the role writes
-# `account.role_change` instead of `account.update`, even when other fields
-# changed in the same request, so the more sensitive change is never buried
-# under the generic code.
+# The audit target these endpoints write, and the seven codes the retention
+# policy and issue #129 list for an account. An edit that changes the role
+# writes `account.role_change` instead of `account.update`, even when other
+# fields changed in the same request, so the more sensitive change is never
+# buried under the generic code.
 AUDIT_TARGET_TYPE = 'account'
 AUDIT_CREATE = 'account.create'
 AUDIT_UPDATE = 'account.update'
@@ -75,9 +84,12 @@ AUDIT_ROLE_CHANGE = 'account.role_change'
 AUDIT_DEACTIVATE = 'account.deactivate'
 AUDIT_REACTIVATE = 'account.reactivate'
 AUDIT_DELETE = 'account.delete'
+AUDIT_PASSWORD_RESET = 'account.password_reset'
 
 LAST_PARENT_DETAIL = 'The household must keep at least one active parent.'
 DUPLICATE_USERNAME_DETAIL = 'A user with that username already exists.'
+VERIFICATION_REQUIRED_DETAIL = 'Enter your PIN or your account password, not both.'
+VERIFICATION_FAILED_DETAIL = 'That PIN or password was not correct.'
 
 # The exact query string that widens the directory to both login states.
 INCLUDE_INACTIVE_PARAMETER = 'include_inactive'
@@ -168,26 +180,25 @@ class MemberCreateSerializer(serializers.Serializer):
 
 
 class MemberUpdateSerializer(serializers.Serializer):
-    """An edit body: username, password and role, each optional.
+    """An edit body: username and role, each optional.
 
     A field left out of the request is left out of `validated_data`
     entirely, which is how the view tells "not sent" from "sent unchanged" -
     unlike `ChoreWriteSerializer`, this never runs under DRF's own `partial`
     flag, because every field is already declared optional here.
+
+    No `password` field: setting one account's password from another one's
+    session needs its own proof, stronger than "the caller is a parent of
+    this household" (issue #129). `MemberPasswordResetView` below is that
+    route, and is the only way this API ever changes a password that is not
+    the caller's own.
     """
 
     username = serializers.CharField(required=False)
-    password = serializers.CharField(
-        required=False, trim_whitespace=False, write_only=True
-    )
     role = serializers.ChoiceField(required=False, choices=Membership.Role.choices)
 
     def validate_username(self, value):
         return _clean_username(value, instance=self.context['user'])
-
-    def validate_password(self, value):
-        _run_password_validators(value, self.context['user'])
-        return value
 
 
 def _member_payload(membership):
@@ -379,11 +390,6 @@ class MemberDetailView(_MemberAPIView):
                     target.user.username = data['username']
                     user_fields.append('username')
 
-                if 'password' in data:
-                    target.user.set_password(data['password'])
-                    changes['password'] = {'changed': True}
-                    user_fields.append('password')
-
                 role_changed = False
                 if 'role' in data and data['role'] != target.role:
                     if (
@@ -510,3 +516,119 @@ class MemberReactivateView(_MemberStateView):
 
     target_state = True
     audit_action = AUDIT_REACTIVATE
+
+
+class MemberPasswordResetSerializer(serializers.Serializer):
+    """A reset body: the new password, and exactly one proof of the actor.
+
+    `pin` and `password` are both optional so either may be sent, but
+    `validate` refuses a request naming neither or both: a caller states
+    which proof it is offering rather than have the server try to guess from
+    the shape of the value (a PIN and a numeric password can look alike).
+    """
+
+    new_password = serializers.CharField(
+        required=True, allow_blank=False, trim_whitespace=False, write_only=True
+    )
+    # `max_length=1000` matches `PinSetSerializer.pin` in `api/pin.py`: a
+    # generous sanity cap, not the real rule. The real four-to-ten-digit rule
+    # lives in `identity.services.verify_pin`'s stored hash comparison, so a
+    # too-long value is simply never a match rather than a different error.
+    pin = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        trim_whitespace=False,
+        max_length=1000,
+        write_only=True,
+    )
+    password = serializers.CharField(
+        required=False, allow_blank=False, trim_whitespace=False, write_only=True
+    )
+
+    def validate_new_password(self, value):
+        _run_password_validators(value, self.context['user'])
+        return value
+
+    def validate(self, attrs):
+        if ('pin' in attrs) == ('password' in attrs):
+            raise serializers.ValidationError({'detail': VERIFICATION_REQUIRED_DETAIL})
+        return attrs
+
+
+class MemberPasswordResetView(_MemberAPIView):
+    """`POST /api/v1/household-members/<pk>/reset-password/`.
+
+    Sets a new password for one member of the caller's household who is not
+    the caller (`deny_self_action`; changing one's own password is
+    `chorum_murohc.api.password.PasswordChangeView` instead). Requires the
+    acting parent's own PIN, verified through `identity.services.verify_pin`
+    so a wrong guess counts against that parent's own lockout exactly as it
+    would from the approval flow, or the acting parent's own account
+    password - on top of the parent-of-this-household check every route in
+    this file already makes.
+
+    `_docs/approval-authentication.md`: "If the password is also forgotten
+    the other parent changes it, and that must clear the target's PIN and
+    lockout too." So when the target holds a `ParentPin`, this deletes it in
+    the same transaction as the password write; a child target never has
+    one, and the delete is a silent no-op when the target parent had not set
+    one either.
+    """
+
+    http_method_names = ('post', 'options')
+
+    def post(self, request, pk):
+        with transaction.atomic():
+            actor = self.require_parent_membership()
+            target, _locked_parents = self.get_locked_member(actor.household, pk)
+            self.deny_self_action(actor, target)
+
+            serializer = MemberPasswordResetSerializer(
+                data=request.data, context={'user': target.user}
+            )
+            serializer.is_valid(raise_exception=True)
+            data = serializer.validated_data
+
+            if 'pin' in data:
+                verification_method = 'pin'
+                verified = (
+                    verify_pin(
+                        user=actor.user,
+                        household=actor.household,
+                        submitted_pin=data['pin'],
+                    )
+                    == PinVerificationResult.MATCH
+                )
+            else:
+                verification_method = 'password'
+                verified = actor.user.check_password(data['password'])
+
+            if not verified:
+                return Response(
+                    {'detail': VERIFICATION_FAILED_DETAIL},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            target.user.set_password(data['new_password'])
+            target.user.save(update_fields=('password',))
+
+            pin_cleared = False
+            if target.role == Membership.Role.PARENT:
+                deleted_count, _deleted_by_model = ParentPin.objects.filter(
+                    user=target.user
+                ).delete()
+                pin_cleared = deleted_count > 0
+
+            self.write_audit_event(
+                actor,
+                AUDIT_PASSWORD_RESET,
+                target.user_id,
+                {
+                    'actor_id': actor.user_id,
+                    'target_id': target.user_id,
+                    'verification_method': verification_method,
+                    'pin_cleared': pin_cleared,
+                },
+            )
+            body = _member_payload(target)
+        return Response(body)

@@ -31,6 +31,7 @@ from chorum_murohc.api.members import (
     MemberDeactivateView,
     MemberDetailView,
     MemberListView,
+    MemberPasswordResetView,
     MemberReactivateView,
     _deny_if_would_remove_last_active_parent,
     _lock_parents,
@@ -67,6 +68,10 @@ def reactivate_path(user_id):
     return f'{LIST_PATH}{user_id}/reactivate/'
 
 
+def reset_password_path(user_id):
+    return f'{LIST_PATH}{user_id}/reset-password/'
+
+
 def every_route(user_id):
     """Every method and path this task exposes, as one table."""
     return (
@@ -77,6 +82,7 @@ def every_route(user_id):
         ('delete', detail_path(user_id)),
         ('post', deactivate_path(user_id)),
         ('post', reactivate_path(user_id)),
+        ('post', reset_password_path(user_id)),
     )
 
 
@@ -165,7 +171,7 @@ def one_event(action):
 # Routing
 
 
-def test_the_four_routes_are_named_and_resolve():
+def test_the_five_routes_are_named_and_resolve():
     assert reverse('api_v1:member-list') == LIST_PATH
     assert reverse('api_v1:member-detail', args=(7,)) == '/api/v1/household-members/7/'
     assert reverse('api_v1:member-deactivate', args=(7,)) == (
@@ -174,11 +180,15 @@ def test_the_four_routes_are_named_and_resolve():
     assert reverse('api_v1:member-reactivate', args=(7,)) == (
         '/api/v1/household-members/7/reactivate/'
     )
+    assert reverse('api_v1:member-reset-password', args=(7,)) == (
+        '/api/v1/household-members/7/reset-password/'
+    )
 
     assert resolve(LIST_PATH).func.view_class is MemberListView
     assert resolve(detail_path(7)).func.view_class is MemberDetailView
     assert resolve(deactivate_path(7)).func.view_class is MemberDeactivateView
     assert resolve(reactivate_path(7)).func.view_class is MemberReactivateView
+    assert resolve(reset_password_path(7)).func.view_class is MemberPasswordResetView
 
 
 # Listing
@@ -510,10 +520,13 @@ def test_a_role_change_writes_role_change_even_with_another_field(
     assert Membership.objects.get(user=child_a).role == Membership.Role.PARENT
 
 
-def test_a_password_reset_is_never_logged_or_returned(
-    api_client, household_a, parent_a, child_a
-):
+def test_patch_no_longer_accepts_a_password(api_client, household_a, parent_a, child_a):
+    # Setting someone else's password now needs its own proof: it moved to
+    # `MemberPasswordResetView` in `test_member_password_reset.py`. A stray
+    # `password` field in a plain edit is an unknown field to this
+    # serializer, so DRF drops it and the account keeps its old password.
     sign_in(api_client, parent_a)
+    original_password_hash = child_a.password
     new_password = 'a totally different passphrase 99'
 
     response = call(
@@ -525,15 +538,9 @@ def test_a_password_reset_is_never_logged_or_returned(
     assert new_password not in response.content.decode()
 
     child_a.refresh_from_db()
-    assert child_a.check_password(new_password)
-
-    event = one_event('account.update')
-    # `AuditEvent`'s own context sanitiser (`audit/models.py`) redacts any
-    # value stored under a key named "password", whatever shape that value
-    # takes - so the marker this view writes is redacted too, defence in
-    # depth on top of this view never writing the password itself.
-    assert event.context['changes'] == {'password': '[REDACTED]'}
-    assert new_password not in str(event.context)
+    assert child_a.check_password(new_password) is False
+    assert child_a.password == original_password_hash
+    assert audit_actions() == []
 
 
 @pytest.mark.parametrize('body', ({}, {'username': 'synthetic-child-a'}))
@@ -841,6 +848,7 @@ def test_an_unknown_and_a_foreign_identifier_answer_the_same_generic_404(
         ('delete', detail_path),
         ('post', deactivate_path),
         ('post', reactivate_path),
+        ('post', reset_password_path),
     ):
         unknown = call(api_client, method, build(unknown_id))
         cross = call(api_client, method, build(foreign.pk))
@@ -950,6 +958,7 @@ def test_an_unsafe_method_without_a_csrf_token_is_refused_and_changes_nothing(
         ('delete', detail_path(child_a.pk)),
         ('post', deactivate_path(child_a.pk)),
         ('post', reactivate_path(child_a.pk)),
+        ('post', reset_password_path(child_a.pk)),
     )
     for method, path in unsafe:
         response = call(api_client, method, path, {'role': 'parent'}, with_csrf=False)
@@ -975,6 +984,7 @@ def test_reading_is_side_effect_free(api_client, household_a, parent_a, child_a)
         ('put', detail_path),
         ('get', deactivate_path),
         ('get', reactivate_path),
+        ('get', reset_password_path),
     ),
 )
 def test_an_unsupported_detail_method_is_refused(

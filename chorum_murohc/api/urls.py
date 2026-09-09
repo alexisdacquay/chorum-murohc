@@ -13,9 +13,11 @@ from chorum_murohc.api.members import (
     MemberDeactivateView,
     MemberDetailView,
     MemberListView,
+    MemberPasswordResetView,
     MemberReactivateView,
 )
 from chorum_murohc.api.overview import OverviewView
+from chorum_murohc.api.password import PasswordChangeView
 from chorum_murohc.api.pin import PinView
 from chorum_murohc.api.progression import ProgressionAcknowledgeView, ProgressionView
 from chorum_murohc.api.redemptions import (
@@ -46,6 +48,7 @@ urlpatterns = [
     path('auth/login/', LoginView.as_view(), name='auth-login'),
     path('auth/logout/', LogoutView.as_view(), name='auth-logout'),
     path('auth/pin/', PinView.as_view(), name='auth-pin'),
+    path('auth/password/', PasswordChangeView.as_view(), name='auth-password'),
     path('chores/', ChoreListView.as_view(), name='chore-list'),
     path('chores/<int:pk>/', ChoreDetailView.as_view(), name='chore-detail'),
     path(
@@ -85,6 +88,11 @@ urlpatterns = [
         'household-members/<int:pk>/reactivate/',
         MemberReactivateView.as_view(),
         name='member-reactivate',
+    ),
+    path(
+        'household-members/<int:pk>/reset-password/',
+        MemberPasswordResetView.as_view(),
+        name='member-reset-password',
     ),
     path('audit/', AuditEventListView.as_view(), name='audit-list'),
     path('overview/', OverviewView.as_view(), name='overview'),

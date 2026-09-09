@@ -1,18 +1,21 @@
 /**
  * The parent household screen at `/household` (issue #21).
  *
- * List, create, edit, deactivate, reactivate and delete against the merged
- * account-directory API, reusing the chore-pool card, dialog and layout
- * classes rather than inventing parallel ones for a structurally identical
- * screen. This module owns no authority decision: the route that reaches it
- * is already parent-only (usability, per invariant 10), and every request
- * still answers for itself, so a session that loses parent standing mid-visit
- * surfaces as an ordinary permission failure rather than a client-side guess.
+ * List, create, edit, deactivate, reactivate, delete and reset the password
+ * of a member against the merged account-directory API, reusing the
+ * chore-pool card, dialog and layout classes rather than inventing parallel
+ * ones for a structurally identical screen. This module owns no authority
+ * decision: the route that reaches it is already parent-only (usability, per
+ * invariant 10), and every request still answers for itself, so a session
+ * that loses parent standing mid-visit surfaces as an ordinary permission
+ * failure rather than a client-side guess.
  *
- * The caller's own row never shows edit, deactivate or delete controls.
- * That is also usability, not the authorisation boundary - the API denies
- * self-action on every one of those routes regardless - but showing a
- * control that always answers 403 would be a worse, more confusing screen.
+ * The caller's own row never shows edit, reset-password, deactivate or
+ * delete controls. That is also usability, not the authorisation boundary -
+ * the API denies self-action on every one of those routes regardless - but
+ * showing a control that always answers 403 would be a worse, more confusing
+ * screen. Changing the caller's own password is the separate
+ * `/change-password` screen instead.
  */
 
 import { useState, type ReactNode } from 'react'
@@ -35,6 +38,7 @@ import { FormMessage } from '../ui/form-message'
 import { DeleteMemberDialog } from './delete-member-dialog'
 import { MemberFormDialog } from './member-form-dialog'
 import { describeMemberFailure } from './member-messages'
+import { ResetMemberPasswordDialog } from './reset-member-password-dialog'
 
 const EMPTY_ACTIVE_COPY =
   'No other active household members yet. Add one, or show inactive members to see who is hidden.'
@@ -49,6 +53,7 @@ export function HouseholdScreen() {
   const [includeInactive, setIncludeInactive] = useState(false)
   const [formTarget, setFormTarget] = useState<FormTarget>(null)
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null)
+  const [resetTarget, setResetTarget] = useState<Member | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   // Shares the session cache App.tsx's own query already fills, so this is
@@ -98,6 +103,11 @@ export function HouseholdScreen() {
   const closeDelete = () => setDeleteTarget(null)
   const handleDeleted = () => {
     closeDelete()
+    void invalidateDirectory()
+  }
+  const closeReset = () => setResetTarget(null)
+  const handleReset = () => {
+    closeReset()
     void invalidateDirectory()
   }
 
@@ -172,6 +182,13 @@ export function HouseholdScreen() {
                       {member.is_active ? 'Deactivate' : 'Reactivate'}
                     </Button>
                     <Button
+                      aria-label={`Reset password for ${member.username}`}
+                      onClick={() => setResetTarget(member)}
+                      variant="secondary"
+                    >
+                      Reset password
+                    </Button>
+                    <Button
                       aria-label={`Delete ${member.username}`}
                       onClick={() => setDeleteTarget(member)}
                       variant="secondary"
@@ -231,6 +248,18 @@ export function HouseholdScreen() {
             }
           }}
           open={deleteTarget !== null}
+        />
+      ) : null}
+      {resetTarget !== null ? (
+        <ResetMemberPasswordDialog
+          member={resetTarget}
+          onOpenChange={(open) => {
+            if (!open) {
+              closeReset()
+            }
+          }}
+          onReset={handleReset}
+          open={resetTarget !== null}
         />
       ) : null}
     </div>

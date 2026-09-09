@@ -20,8 +20,17 @@ and emits no second audit event.
 - Deactivating sets `is_active=False`, so the member cannot log in from the next
   request. Memberships, submissions, ledger entries, rewards, progression and
   creature selection stay, frozen and attributed. Reactivation restores login.
-- Editing covers account fields and the product role. A role change takes effect
-  on the next request and never rewrites recorded attribution.
+- Editing covers the username and the product role, never a password. A role
+  change takes effect on the next request and never rewrites recorded
+  attribution.
+- Resetting a member's password (issue #129) needs the "Who may act" floor
+  above, plus the acting parent's own PIN or account password in the same
+  request - one more factor than every other action here, because it is the
+  one action that hands someone else's credential to the caller's own typing.
+  A reset on a parent target also clears that parent's PIN and any lockout, per
+  `_docs/approval-authentication.md`. A parent's own password change is a
+  separate, self-service action and is not covered by this policy at all: it
+  needs only the caller's own current password, never another parent's say-so.
 - Deleting a member removes their memberships, submissions, ledger entries,
   rewards, progression rows and creature selection, so deleting a child removes
   their points, level and creature permanently. No other member is touched.

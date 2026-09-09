@@ -302,7 +302,7 @@ describe('adding a member', () => {
 })
 
 describe('editing a member', () => {
-  test('prefills the form and a blank password leaves it unchanged', async () => {
+  test('prefills the form with no password field, and edits username and role', async () => {
     fetchSpy = withSession((input, init) => {
       if (input === '/api/v1/household-members/2/' && init?.method === 'PATCH') {
         return jsonResponse({ ...CHILD_A, role: 'parent' })
@@ -317,7 +317,8 @@ describe('editing a member', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Edit household member' })
     expect(within(dialog).getByLabelText('Username')).toHaveProperty('value', 'kid-a')
-    expect(within(dialog).getByLabelText('New password')).toHaveProperty('value', '')
+    expect(within(dialog).queryByLabelText('Password')).toBeNull()
+    expect(within(dialog).queryByLabelText('New password')).toBeNull()
     expect(within(dialog).getByLabelText('Role')).toHaveProperty('value', 'child')
 
     fireEvent.change(within(dialog).getByLabelText('Role'), {
@@ -466,5 +467,165 @@ describe('deleting a member', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await waitFor(() => expect(screen.queryByText('kid-a')).toBeNull())
+  })
+})
+
+describe('resetting a password', () => {
+  const openDialog = async () => {
+    await waitFor(() => expect(screen.getByText('kid-a')).toBeDefined())
+    fireEvent.click(screen.getByRole('button', { name: 'Reset password for kid-a' }))
+    return screen.findByRole('dialog')
+  }
+
+  test('cancel sends no request and keeps the member', async () => {
+    fetchSpy = withSession(() => jsonResponse([PARENT_ONE, CHILD_A]))
+    vi.stubGlobal('fetch', fetchSpy)
+    renderScreen()
+    const dialog = await openDialog()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(
+      fetchSpy.mock.calls.some((call) => call[0] === '/api/v1/household-members/2/reset-password/'),
+    ).toBe(false)
+  })
+
+  test('refuses an empty submission locally, naming both missing fields', async () => {
+    fetchSpy = withSession(() => jsonResponse([PARENT_ONE, CHILD_A]))
+    vi.stubGlobal('fetch', fetchSpy)
+    renderScreen()
+    const dialog = await openDialog()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reset password' }))
+
+    expect(
+      within(dialog).getByText('Enter your PIN or your account password, not both.'),
+    ).toBeDefined()
+    expect(within(dialog).getByText('Enter a new password.')).toBeDefined()
+    expect(
+      fetchSpy.mock.calls.some((call) => call[0] === '/api/v1/household-members/2/reset-password/'),
+    ).toBe(false)
+  })
+
+  test('refuses both a PIN and a password together, locally', async () => {
+    fetchSpy = withSession(() => jsonResponse([PARENT_ONE, CHILD_A]))
+    vi.stubGlobal('fetch', fetchSpy)
+    renderScreen()
+    const dialog = await openDialog()
+
+    fireEvent.change(within(dialog).getByLabelText('Your PIN'), {
+      target: { value: '3947' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Or your account password'), {
+      target: { value: 'synthetic-only-actor-password' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('New password'), {
+      target: { value: 'a genuinely unusual passphrase 42' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Confirm new password'), {
+      target: { value: 'a genuinely unusual passphrase 42' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reset password' }))
+
+    expect(
+      within(dialog).getByText('Enter your PIN or your account password, not both.'),
+    ).toBeDefined()
+    expect(
+      fetchSpy.mock.calls.some((call) => call[0] === '/api/v1/household-members/2/reset-password/'),
+    ).toBe(false)
+  })
+
+  test('flags a confirmation mismatch without sending a request', async () => {
+    fetchSpy = withSession(() => jsonResponse([PARENT_ONE, CHILD_A]))
+    vi.stubGlobal('fetch', fetchSpy)
+    renderScreen()
+    const dialog = await openDialog()
+
+    fireEvent.change(within(dialog).getByLabelText('Or your account password'), {
+      target: { value: 'synthetic-only-actor-password' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('New password'), {
+      target: { value: 'a genuinely unusual passphrase 42' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Confirm new password'), {
+      target: { value: 'not the same value' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reset password' }))
+
+    expect(within(dialog).getByText('Both passwords must match.')).toBeDefined()
+    expect(
+      fetchSpy.mock.calls.some((call) => call[0] === '/api/v1/household-members/2/reset-password/'),
+    ).toBe(false)
+  })
+
+  test('posts the account password and the new password, then closes on success', async () => {
+    fetchSpy = withSession((input, init) => {
+      if (
+        input === '/api/v1/household-members/2/reset-password/' &&
+        init?.method === 'POST'
+      ) {
+        return jsonResponse(CHILD_A)
+      }
+      return jsonResponse([PARENT_ONE, CHILD_A])
+    })
+    vi.stubGlobal('fetch', fetchSpy)
+    renderScreen()
+    const dialog = await openDialog()
+
+    fireEvent.change(within(dialog).getByLabelText('Or your account password'), {
+      target: { value: 'synthetic-only-actor-password' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('New password'), {
+      target: { value: 'a genuinely unusual passphrase 42' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Confirm new password'), {
+      target: { value: 'a genuinely unusual passphrase 42' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reset password' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    const [, postInit] = fetchSpy.mock.calls.find(
+      (call) =>
+        call[0] === '/api/v1/household-members/2/reset-password/' &&
+        call[1]?.method === 'POST',
+    )!
+    expect(JSON.parse(postInit.body as string)).toEqual({
+      new_password: 'a genuinely unusual passphrase 42',
+      password: 'synthetic-only-actor-password',
+    })
+    expect(postInit.headers['X-CSRFToken']).toBe(TEST_CSRF_TOKEN)
+  })
+
+  test('a wrong PIN or password shows the server detail verbatim', async () => {
+    fetchSpy = withSession((input, init) => {
+      if (
+        input === '/api/v1/household-members/2/reset-password/' &&
+        init?.method === 'POST'
+      ) {
+        return jsonResponse({ detail: 'That PIN or password was not correct.' }, 400)
+      }
+      return jsonResponse([PARENT_ONE, CHILD_A])
+    })
+    vi.stubGlobal('fetch', fetchSpy)
+    renderScreen()
+    const dialog = await openDialog()
+
+    fireEvent.change(within(dialog).getByLabelText('Your PIN'), {
+      target: { value: '0000' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('New password'), {
+      target: { value: 'a genuinely unusual passphrase 42' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Confirm new password'), {
+      target: { value: 'a genuinely unusual passphrase 42' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reset password' }))
+
+    await waitFor(() =>
+      expect(
+        within(dialog).getByText('That PIN or password was not correct.'),
+      ).toBeDefined(),
+    )
+    expect(screen.getByRole('dialog')).toBeDefined()
   })
 })
