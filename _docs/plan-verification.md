@@ -1,14 +1,19 @@
 # Plan Verification - go or no-go
 
-> **Status:** Evidence-backed verdict (T096), 2026-09-09. Nothing is fixed
-> here; a gap is recorded, not closed.
+> **Status:** Evidence-backed verdict (T096), 2026-09-09, restated against
+> `1ec2d24`. Nothing is fixed here; a gap is recorded, not closed.
 
-## Verdict: no-go, on one requirement
+## Verdict: go
 
-Everything in `_docs/plan.md` is implemented, tested and driven end to end in
-a browser, except the parent's view of every child's balance and level. That
-one requirement is unbuilt and owned by an open issue. The product cannot be
-called plan-complete until it lands; nothing else is missing.
+Every requirement in `_docs/plan.md` is implemented, tested, and driven end to
+end in a browser. The last one outstanding - a parent seeing every child's
+balance and level - landed in #84 while this verification was being written,
+and the audit re-run covers its screen.
+
+The go is on the product, not on the paperwork: `_docs/plan.md` still states
+three sets of terms the product deliberately no longer follows, which is
+recorded below as P-02. Read the plan and you will be told the wrong rules for
+interest, rewards and levelling.
 
 ## Requirement by requirement
 
@@ -33,13 +38,13 @@ called plan-complete until it lands; nothing else is missing.
 | Admin: create and delete users, assign roles | Done | Household screen and its API |
 | Admin: create, edit, delete chores and point values | Done | Chore pool screen and its API |
 | Admin: approve or reject submissions | Done | Approvals screen and both PIN paths |
-| **Admin: view all users' point balances and levels** | **Not built** | No `/overview` screen and no overview API. `/overview` and `/activity` still render the router's placeholder. Owned by [#84](https://github.com/alexisdacquay/chorum-murohc/issues/84) |
+| Admin: view all users' point balances and levels | Done | `/api/v1/overview/` and the Overview screen, landed in [#84](https://github.com/alexisdacquay/chorum-murohc/issues/84) at `e607658`. Audited in place; one heading-order finding, A-04 |
 
 ## Gaps recorded
 
 | Id | What is missing | Owner |
 | --- | --- | --- |
-| P-01 | The parent household overview: every child's balance, level, pending work. The one plan requirement with no implementation | [#84](https://github.com/alexisdacquay/chorum-murohc/issues/84) |
+| P-01 | Closed. The parent household overview landed in #84 at `e607658` | [#84](https://github.com/alexisdacquay/chorum-murohc/issues/84) |
 | P-02 | `_docs/plan.md` still states the superseded interest, reward and levelling terms. Three approved decisions changed them and none amended the plan, so the plan now contradicts the product in three places | Unowned; a documentation edit, not a code change |
 | P-03 | `_docs/tasks.md` T091 cites `_docs/reward-policy.md`, which does not exist. The reward policy lives in issue #55's brief instead | Unowned |
 

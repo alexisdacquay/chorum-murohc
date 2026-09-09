@@ -2,7 +2,9 @@
 
 > **Status:** Findings only (T095). Nothing here is fixed by the audit.
 >
-> **Date:** 2026-09-09. **Method:** live browser probes
+> **Date:** 2026-09-09, re-run against `1ec2d24` once the parent overview and
+> activity screens landed; the findings did not change.
+> **Method:** live browser probes
 > (`python3 -m browser_journeys.run_journeys . audit-security`),
 > `manage.py check --deploy` against a production configuration, and a source
 > read of settings, permissions, services, the audit writer and CI.
