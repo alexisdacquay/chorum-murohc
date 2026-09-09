@@ -7,8 +7,11 @@ Every fixture is synthetic. The rates under test are the configured ones, so
 these tests fail if `config/settings.py` ever loosens them silently.
 """
 
+from concurrent.futures import ThreadPoolExecutor
+
 import pytest
 from django.core.cache import caches
+from django.db import connection
 from django.test import RequestFactory
 from rest_framework.settings import api_settings
 from rest_framework.test import APIClient
@@ -38,7 +41,9 @@ LOGIN_FAILURE_BODY = {'detail': LOGIN_FAILED_DETAIL}
 
 
 @pytest.fixture(autouse=True)
-def clean_login_throttle():
+def clean_login_throttle(db):
+    # The cache is database-backed (issue 128), so clearing it needs the `db`
+    # fixture's opt-in even for a test that otherwise touches no model.
     caches[LOGIN_THROTTLE_CACHE_ALIAS].clear()
     yield
     caches[LOGIN_THROTTLE_CACHE_ALIAS].clear()
@@ -117,6 +122,46 @@ def test_only_the_login_view_is_throttled():
 def test_counters_live_in_the_dedicated_cache():
     assert LoginBurstThrottle().cache is caches[LOGIN_THROTTLE_CACHE_ALIAS]
     assert LoginBurstThrottle().cache is not caches['default']
+
+
+@pytest.mark.django_db(transaction=True)
+def test_two_independent_cache_clients_share_one_counter():
+    """The counter a second worker process would see is the same counter.
+
+    `LocMemCache` only ever shared state within one Python process, which is
+    exactly how a second worker used to multiply the allowance (issue 128):
+    each process's `LoginBurstThrottle` thought it held the whole ten-request
+    budget. Two threads each get their own database connection the same way
+    two worker processes would, so recording the burst limit's worth of
+    failures on one and then asking the other is as close as one machine
+    gets to proving two processes share one counter. Guarded to PostgreSQL
+    like the sibling concurrency tests in `ledger/tests.py` and
+    `identity/test_services.py`: SQLite's default test database is in
+    memory, which does not give two threads two independent connections to
+    tell apart.
+    """
+    if connection.vendor != 'postgresql':
+        pytest.skip('requires the guarded PostgreSQL target')
+
+    request = RequestFactory().post(LOGIN_PATH, REMOTE_ADDR='198.51.100.201')
+
+    def spend_the_whole_allowance():
+        throttle = LoginBurstThrottle()
+        for _ in range(BURST_LIMIT):
+            throttle.record_failure(request)
+
+    def allowance_left():
+        return LoginBurstThrottle().allow_request(request, None)
+
+    with ThreadPoolExecutor(max_workers=1) as first_worker:
+        first_worker.submit(spend_the_whole_allowance).result(timeout=15)
+
+    with ThreadPoolExecutor(max_workers=1) as second_worker:
+        still_allowed = second_worker.submit(allowance_left).result(timeout=15)
+
+    # The first worker's ten failures are visible to the second: one shared
+    # counter, not one each.
+    assert still_allowed is False
 
 
 def test_the_cache_key_is_the_client_address_and_never_the_username():

@@ -66,8 +66,12 @@ FORBIDDEN_BODY_TEXT = (
 
 
 @pytest.fixture(autouse=True)
-def clean_login_throttle():
-    """Keep the per-process throttle counters out of neighbouring tests."""
+def clean_login_throttle(db):
+    """Keep the throttle counters out of neighbouring tests.
+
+    The cache is database-backed (issue 128), so clearing it needs the `db`
+    fixture's opt-in even for a test that otherwise touches no model.
+    """
     caches[LOGIN_THROTTLE_CACHE_ALIAS].clear()
     yield
     caches[LOGIN_THROTTLE_CACHE_ALIAS].clear()
