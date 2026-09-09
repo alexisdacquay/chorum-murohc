@@ -5,6 +5,7 @@ import { SignInForm } from './components/auth/sign-in-form'
 import { SignOutButton } from './components/auth/sign-out-button'
 import { ChildChoreScreen } from './components/chores/child-chore-screen'
 import { ChorePoolScreen } from './components/chores/chore-pool-screen'
+import { CreatureScreen } from './components/creatures/creature-screen'
 import { HouseholdScreen } from './components/members/household-screen'
 import { PointsDashboardScreen } from './components/points/points-dashboard-screen'
 import { LevelsScreen } from './components/progression/levels-screen'
@@ -16,7 +17,8 @@ import { RoleRouter } from './navigation/role-router'
 // Screens built so far, keyed by their approved route path (issue #37 owns
 // `/chore-pool`, issue #36 owns `/chores`, issue #21 owns `/household`, issue
 // #30 owns `/approval-pin`; issue #55 owns `/rewards` and
-// `/reward-requests`; issue #61 owns `/levels`; issue #49 owns `/points`).
+// `/reward-requests`; issue #61 owns `/levels`; issue #49 owns `/points`;
+// issue #66 owns `/creature`).
 // Every other approved path still falls back to the router's own neutral
 // placeholder.
 const SCREENS = {
@@ -28,6 +30,7 @@ const SCREENS = {
   '/rewards': <ChildRewardsScreen />,
   '/reward-requests': <ParentRewardsScreen />,
   '/levels': <LevelsScreen />,
+  '/creature': <CreatureScreen />,
 }
 
 /**

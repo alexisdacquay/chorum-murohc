@@ -765,6 +765,166 @@
     line-height: var(--text-sm--line-height);
   }
 
+  .creature-status {
+    color: var(--color-foreground-muted);
+  }
+
+  .creature-error {
+    display: grid;
+    min-inline-size: 0;
+    justify-items: start;
+    gap: var(--spacing-3);
+  }
+
+  .creature-drawing {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+    aspect-ratio: 1;
+  }
+
+  /* A locked form is the same drawing, flattened to a silhouette. The level
+     that reveals it is always written beside it, so the state never depends
+     on seeing this. */
+  .creature-drawing-locked {
+    filter: brightness(0);
+    opacity: 0.2;
+  }
+
+  .creature-chooser {
+    display: grid;
+    min-inline-size: 0;
+    gap: var(--spacing-4);
+  }
+
+  .creature-chooser-intro {
+    margin: 0;
+    max-inline-size: 60ch;
+    color: var(--color-foreground-muted);
+  }
+
+  .creature-chooser-list {
+    display: grid;
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+    gap: var(--spacing-3);
+    list-style: none;
+  }
+
+  .creature-chooser-option {
+    display: grid;
+    inline-size: 100%;
+    min-inline-size: 0;
+    block-size: 100%;
+    padding: var(--spacing-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-foreground);
+    cursor: pointer;
+    gap: var(--spacing-1);
+    justify-items: center;
+    text-align: center;
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+
+  .creature-chooser-option:hover {
+    background: var(--color-surface-muted);
+  }
+
+  .creature-chooser-option:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .creature-drawing-preview {
+    max-inline-size: 6rem;
+  }
+
+  .creature-chooser-name {
+    font-size: var(--text-lead);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--text-lead--line-height);
+  }
+
+  .creature-chooser-description {
+    color: var(--color-foreground-muted);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    overflow-wrap: anywhere;
+  }
+
+  .creature-gallery {
+    display: grid;
+    min-inline-size: 0;
+    gap: var(--spacing-4);
+  }
+
+  .creature-card {
+    inline-size: 100%;
+    max-inline-size: calc(var(--spacing-12) * 10);
+  }
+
+  .creature-card-content {
+    display: grid;
+    min-inline-size: 0;
+    gap: var(--spacing-2);
+    justify-items: center;
+  }
+
+  .creature-drawing-current {
+    max-inline-size: 12rem;
+  }
+
+  .creature-next {
+    margin: 0;
+    color: var(--color-foreground-muted);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    text-align: center;
+  }
+
+  .creature-forms-heading {
+    margin: 0;
+    font-size: var(--text-heading-2);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--text-heading-2--line-height);
+  }
+
+  .creature-forms {
+    display: grid;
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+    gap: var(--spacing-3);
+    list-style: none;
+  }
+
+  .creature-tile {
+    display: grid;
+    min-inline-size: 0;
+    padding: var(--spacing-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-muted);
+    gap: var(--spacing-1);
+    justify-items: center;
+    text-align: center;
+  }
+
+  .creature-tile-name {
+    font-weight: var(--font-weight-medium);
+    overflow-wrap: anywhere;
+  }
+
+  .creature-tile-level {
+    color: var(--color-foreground-muted);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
 }
 
 @media (min-width: 48rem) {

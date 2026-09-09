@@ -85,7 +85,7 @@ packages.
 | `chorum_murohc.ledger` | Immutable point transactions | T038 and later ledger-schema changes |
 | `chorum_murohc.rewards` | Reward-redemption records | T056 and later reward-schema changes |
 | `chorum_murohc.progression` | Per-child level state | T062 and later progression-schema changes |
-| `chorum_murohc.creatures` | Creature catalogue, forms, and selection state | T069 and later creature-schema changes |
+| `chorum_murohc.creatures` | Creature catalogue (code, not a table) and per-child selection state | #66 and later creature-schema changes |
 | `chorum_murohc.interest` | Weekly interest accrual policy and command; no product models of its own | T052 and later interest-accrual changes |
 
 Python dependencies between product apps must follow this acyclic direction
@@ -303,7 +303,7 @@ explicitly allowed is denied.
 | Initiate or view child reward | Deny | Allow own reward initiation and status only after T055 policy | Deny child operation | T055 to T057; exact server conversion, balance, and idempotency |
 | Fulfil, reject, cancel, or reverse reward | Deny | Deny | Deny until T055 explicitly grants a named same-household parent transition | T055, T059; otherwise the task is formally not applicable |
 | Read or advance level | Deny | Allow own read, and own acknowledgement that a reached level has been shown | No mutation; allow own-household level summary through T084 | T061 to T064, T084; level is server-computed from lifetime ledger credits, never client-supplied, and never spent or lost |
-| Creature catalogue, selection, and evolution | Deny product state | Allow own approved catalogue visibility and own evolution history; initial selection denied until T067 names the actor and path | Allow only the plan-required household summary; no selection unless T067 explicitly grants it | T066 to T082, T084; the catalogue is global but user selection and state remain scoped |
+| Creature catalogue, selection, and evolution | Deny product state | Allow own catalogue read, own evolution state, and one write-once selection of own line | Allow only the plan-required household summary; no selection and no catalogue route | #66, T084; the catalogue is global but user selection and state remain scoped, and the client never supplies the level or the unlocked forms |
 | Parent household overview | Deny | Deny | Allow minimum own-household member, balance, level, and pending summary | T084; no foreign household and no detailed secret or history expansion |
 | Read audit history | Deny | Deny | Allow redacted own-household events only | T086; native pagination, safe filters, immutable read only |
 | Create audit event | Deny direct access | Deny direct access | Deny direct access | Named server mutations emit exact events; bootstrap and system may use `actor=None` only when no human actor exists |
@@ -400,8 +400,8 @@ the related mutation remains denied.
 | Interest arithmetic, time, rounding, and missed-day behaviour | T050 | No user direct mutation and no accrual before the approved service |
 | Reward debit, fulfil, cancel, and reversal transitions | T055 | Child self-initiation ceiling; parent transitions denied until approved |
 | Level costs, maximum, and form mapping | T061 | Child self-level-up ceiling; the server computes the exact cost |
-| Creature rights, assets, and catalogue contract | T066, T068 | No unapproved lineage or asset exposure and no external media action |
-| Initial creature chooser, actor, timing, incomplete state, and repeat rule | T067 | Selection denied until approved; the current plan remains child-at-signup unless amended |
+| Creature rights, assets, and catalogue contract | #66 | Settled in `_docs/creature-catalogue-policy.md`: no third-party intellectual property, original committed SVG only, and no external media action |
+| Initial creature chooser, actor, timing, incomplete state, and repeat rule | #66 | The child picks their own line at first sign-in, after their account exists; the choice is write-once |
 
 ### Approval Evidence
 
