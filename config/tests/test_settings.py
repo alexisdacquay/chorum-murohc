@@ -176,9 +176,7 @@ def assert_configuration_error(overrides, expected_message):
     }
 
 
-def test_missing_variables_use_safe_development_defaults_without_creating_db():
-    assert not DEFAULT_DATABASE.exists()
-
+def test_missing_variables_use_safe_development_defaults():
     result = settings_probe()
 
     assert result['status'] == 'ok'
@@ -194,7 +192,20 @@ def test_missing_variables_use_safe_development_defaults_without_creating_db():
     assert result['database_engine'] == 'django.db.backends.sqlite3'
     assert result['database_name'] == str(DEFAULT_DATABASE)
     assert result['database_name_is_path'] is True
-    assert not DEFAULT_DATABASE.exists()
+
+
+def test_loading_settings_does_not_create_the_configured_sqlite_database(tmp_path):
+    database = tmp_path / 'settings-probe.sqlite3'
+
+    assert not database.exists()
+
+    result = settings_probe({'DJANGO_DB_NAME': str(database)})
+
+    assert result['status'] == 'ok'
+    assert result['database_engine'] == 'django.db.backends.sqlite3'
+    assert result['database_name'] == str(database)
+    assert result['database_name_is_path'] is True
+    assert not database.exists()
 
 
 def test_probe_does_not_inherit_ambient_django_variables(monkeypatch):
