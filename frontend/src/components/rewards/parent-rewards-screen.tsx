@@ -289,7 +289,7 @@ function RewardCatalogue() {
         <h2 id="reward-catalogue-heading">Catalogue</h2>
         <Button onClick={() => setFormTarget('create')}>Add reward</Button>
       </div>
-      <label className="reward-catalogue-filter">
+      <label className="chore-pool-filter">
         <input
           checked={includeInactive}
           onChange={(event) => setIncludeInactive(event.target.checked)}

@@ -84,7 +84,7 @@ function ChildCard({ child }: { child: OverviewChild }) {
       <Card className="overview-child-card">
         <CardHeader>
           <CardTitle>
-            <h3>{child.username}</h3>
+            <h2>{child.username}</h2>
           </CardTitle>
         </CardHeader>
         <CardContent className="overview-child-stats">
