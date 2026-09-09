@@ -107,13 +107,40 @@ window.CHORUM_JOURNEYS['audit-security'] = async function (t) {
       t.record('response headers: ' + name + ' is set')
     }
   })
-  ;['content-security-policy', 'strict-transport-security'].forEach(function (name) {
-    if (session.headers.get(name) === null) {
-      note('response headers', 'browser security headers', name + ' is not sent')
-    } else {
-      t.record('response headers: ' + name + ' is set')
-    }
-  })
+  // The CSP header itself, not merely its presence (S-01): it must forbid
+  // inline script and restrict default-src to self, which is what the audit
+  // requires and what a browser will actually enforce.
+  var csp = session.headers.get('content-security-policy')
+  if (csp === null) {
+    note('response headers', 'browser security headers', 'content-security-policy is not sent')
+  } else if (csp.indexOf("default-src 'self'") === -1) {
+    note(
+      'response headers',
+      'browser security headers',
+      'content-security-policy does not restrict default-src to self: "' + csp + '"',
+    )
+  } else if (csp.indexOf('unsafe-inline') !== -1 || csp.indexOf('unsafe-eval') !== -1) {
+    note(
+      'response headers',
+      'browser security headers',
+      'content-security-policy allows inline or eval script: "' + csp + '"',
+    )
+  } else {
+    t.record(
+      'response headers: content-security-policy forbids inline script and restricts default-src to self',
+    )
+  }
+
+  // Strict-Transport-Security is production-only (SECURE_HSTS_SECONDS is 0
+  // outside production, exactly like the cookie Secure flags), and this
+  // harness always runs in development, so it is never sent here. S-02's
+  // regression test is `config/tests/test_settings.py`, which does run
+  // against a production configuration; this probe only records the fact.
+  if (session.headers.get('strict-transport-security') === null) {
+    t.record('response headers: strict-transport-security is not sent (development only)')
+  } else {
+    t.record('response headers: strict-transport-security is set')
+  }
 
   // A signed-out caller must get nothing at all from a product route.
   await t.signOut()

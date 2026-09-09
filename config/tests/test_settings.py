@@ -68,11 +68,19 @@ else:
         'csrf_cookie_httponly': settings.CSRF_COOKIE_HTTPONLY,
         'csrf_cookie_samesite': settings.CSRF_COOKIE_SAMESITE,
         'csrf_cookie_secure': settings.CSRF_COOKIE_SECURE,
+        'secure_ssl_redirect': settings.SECURE_SSL_REDIRECT,
+        'secure_hsts_seconds': settings.SECURE_HSTS_SECONDS,
+        'secure_hsts_include_subdomains': settings.SECURE_HSTS_INCLUDE_SUBDOMAINS,
+        'silenced_system_checks': settings.SILENCED_SYSTEM_CHECKS,
         'cache_aliases': sorted(settings.CACHES),
         'login_throttle_cache': settings.CACHES.get('login_throttle'),
         'rest_framework_keys': sorted(settings.REST_FRAMEWORK),
+        'exception_handler': settings.REST_FRAMEWORK['EXCEPTION_HANDLER'],
         'throttle_rates': settings.REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'],
         'num_proxies': settings.REST_FRAMEWORK['NUM_PROXIES'],
+        'security_logger_handlers': settings.LOGGING['loggers'][
+            'chorum_murohc.security'
+        ]['handlers'],
         'postgresql_driver_loaded': any(
             module_name == 'psycopg'
             or module_name.startswith('psycopg.')
@@ -843,6 +851,11 @@ def test_session_and_csrf_cookies_are_hardened_outside_production():
     # Development serves plain HTTP, so Secure would suppress both cookies.
     assert result['session_cookie_secure'] is False
     assert result['csrf_cookie_secure'] is False
+    # Forcing HTTPS or advertising HSTS on plain HTTP would break the dev
+    # server, exactly like marking the cookies Secure would (S-02).
+    assert result['secure_ssl_redirect'] is False
+    assert result['secure_hsts_seconds'] == 0
+    assert result['secure_hsts_include_subdomains'] is False
 
 
 def test_production_marks_both_cookies_secure_and_keeps_every_other_rule():
@@ -855,6 +868,25 @@ def test_production_marks_both_cookies_secure_and_keeps_every_other_rule():
     assert result['csrf_cookie_httponly'] is False
     assert result['session_cookie_samesite'] == 'Lax'
     assert result['csrf_cookie_samesite'] == 'Lax'
+
+
+def test_production_forces_https_and_advertises_hsts():
+    """S-02: `manage.py check --deploy` warns W004 and W008 without these."""
+    result = settings_probe(production_environment())
+
+    assert result['status'] == 'ok'
+    assert result['secure_ssl_redirect'] is True
+    assert result['secure_hsts_seconds'] == 60 * 60 * 24 * 365
+    assert result['secure_hsts_include_subdomains'] is True
+
+
+def test_exactly_one_deploy_check_is_deliberately_silenced():
+    """S-02: `check --deploy` is otherwise clean. W021 (HSTS preload) asks
+    for submission to the browser vendors' hardcoded list, a step this
+    project has not decided to take, so it is silenced rather than set."""
+    result = settings_probe()
+
+    assert result['silenced_system_checks'] == ['security.W021']
 
 
 def test_session_lasts_fourteen_days_without_idle_extension():
@@ -884,10 +916,26 @@ def test_both_login_throttle_rates_are_configured_and_nothing_else_is():
     }
     # No default throttle class, so only the login view is throttled, and no
     # authentication or permission default is declared here either.
-    assert result['rest_framework_keys'] == ['DEFAULT_THROTTLE_RATES', 'NUM_PROXIES']
+    assert result['rest_framework_keys'] == [
+        'DEFAULT_THROTTLE_RATES',
+        'EXCEPTION_HANDLER',
+        'NUM_PROXIES',
+    ]
 
 
 def test_client_address_ignores_forwarding_headers():
     result = settings_probe()
 
     assert result['num_proxies'] == 0
+
+
+def test_refusals_are_logged_through_the_security_exception_handler():
+    """S-04: every refusal DRF raises goes through one logged handler."""
+    result = settings_probe()
+
+    assert result['exception_handler'] == (
+        'chorum_murohc.api.security_logging.logging_exception_handler'
+    )
+    # Always on, not gated by DEBUG the way Django's own default console
+    # handler is: a refusal in production is exactly what this is for.
+    assert result['security_logger_handlers'] == ['security_console']
