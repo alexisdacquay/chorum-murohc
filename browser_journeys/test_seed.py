@@ -45,31 +45,67 @@ def test_run_token_is_new_every_time():
     assert all(re.fullmatch(r'[0-9a-f]{10}', token) for token in tokens)
 
 
+def _household_names(journey):
+    """Every household name one journey's dataset names.
+
+    A journey owns at least one; `audit-accessibility` owns two, because the
+    household picker and the switcher only exist for an account with more
+    than one membership. Every such key ends in "household", so this needs no
+    per-journey list to keep in step.
+    """
+    return {
+        value
+        for key, value in journey.items()
+        if isinstance(value, str) and key.lower().endswith('household')
+    }
+
+
 def test_every_journey_is_seeded(one_run):
     assert set(one_run['journeys']) == set(JOURNEY_NAMES)
 
 
-def test_each_journey_gets_a_household_of_its_own(one_run):
-    names = [journey['household'] for journey in one_run['journeys'].values()]
+def test_every_household_belongs_to_exactly_one_journey(one_run):
+    named = [
+        name
+        for journey in one_run['journeys'].values()
+        for name in _household_names(journey)
+    ]
 
-    assert len(set(names)) == len(JOURNEY_NAMES)
-    assert Household.objects.count() == len(JOURNEY_NAMES)
+    assert len(named) == len(set(named))
+    assert len(named) > len(JOURNEY_NAMES)
+    assert Household.objects.count() == len(named)
 
 
 def test_no_user_belongs_to_two_journeys(one_run):
-    for user in User.objects.all():
-        assert Membership.objects.filter(user=user).count() == 1
+    """A second membership is allowed; a membership of another journey is not."""
+    for journey in one_run['journeys'].values():
+        own = _household_names(journey)
+        members = Membership.objects.filter(household__name__in=own).values_list(
+            'user_id', flat=True
+        )
+        for user_id in set(members):
+            held = set(
+                Membership.objects.filter(user_id=user_id).values_list(
+                    'household__name', flat=True
+                )
+            )
+            assert held <= own
 
 
 def test_every_household_name_carries_its_run_token(one_run):
     for journey in one_run['journeys'].values():
-        assert one_run['token'] in journey['household']
+        for name in _household_names(journey):
+            assert one_run['token'] in name
 
 
 def test_two_runs_share_no_household(two_runs):
     first, second = two_runs
     names = [
-        {journey['household'] for journey in run['journeys'].values()}
+        {
+            name
+            for journey in run['journeys'].values()
+            for name in _household_names(journey)
+        }
         for run in (first, second)
     ]
 
@@ -135,6 +171,16 @@ def test_the_parent_queue_journey_starts_with_work_waiting(one_run):
     )
 
     assert pending.count() == 2
+
+
+def test_the_accessibility_audit_parent_holds_two_memberships(one_run):
+    """Without a second one, the picker and the switcher never render at all,
+    and the audit would walk past two built screens reporting nothing."""
+    journey = one_run['journeys']['audit-accessibility']
+    parent = User.objects.get(username=journey['parent']['username'])
+
+    assert len(_household_names(journey)) == 2
+    assert Membership.objects.filter(user=parent).count() == 2
 
 
 def test_secret_values_finds_every_password_and_pin(one_run):

@@ -93,9 +93,11 @@
       [#27](https://github.com/alexisdacquay/chorum-murohc/issues/27), merged
       2026-09-08: 10 failed attempts per minute and 100 per hour per client
       address, counting failures only and keyed on the address rather than the
-      submitted username. The counters are per process, so a multi-process
-      deployment still multiplies the allowance; that narrowing is owned by
-      [#128](https://github.com/alexisdacquay/chorum-murohc/issues/128).
+      submitted username. The counters were per process, so a multi-process
+      deployment multiplied the allowance; that narrowing is closed too, by
+      [#128](https://github.com/alexisdacquay/chorum-murohc/issues/128),
+      merged 2026-09-09: they now live in a PostgreSQL-backed cache of their
+      own, shared by every process.
 - [ ] Parent PIN retry limit, lockout, and recovery contract. Owner:
       [#29](https://github.com/alexisdacquay/chorum-murohc/issues/29). Until it
       merges, PIN management and approval mutations remain denied.
