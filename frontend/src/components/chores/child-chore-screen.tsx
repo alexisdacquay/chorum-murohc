@@ -21,12 +21,14 @@ import { useState, type ReactNode } from 'react'
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
+import type { DecidedSubmission } from '../../api/approvals'
 import { CHILD_CHORES_QUERY_KEY, fetchChildChores, type ChildChore } from '../../api/chores'
 import {
   PENDING_SUBMISSIONS_QUERY_KEY,
   fetchPendingSubmissions,
   type Submission,
 } from '../../api/submissions'
+import { ChildDeviceDecisionDialog } from '../approvals/child-device-decision-dialog'
 import { Button } from '../ui/button'
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { FormMessage } from '../ui/form-message'
@@ -40,6 +42,7 @@ const pointsLabel = (points: number) => `${points} point${points === 1 ? '' : 's
 export function ChildChoreScreen() {
   const queryClient = useQueryClient()
   const [confirmTarget, setConfirmTarget] = useState<ChildChore | null>(null)
+  const [approvalTarget, setApprovalTarget] = useState<Submission | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const chores = useQuery({
@@ -51,10 +54,12 @@ export function ChildChoreScreen() {
     queryFn: ({ signal }) => fetchPendingSubmissions({ signal }),
   })
 
-  const pendingChoreIds = new Set(
+  const pendingSubmissionByChoreId = new Map(
     (pendingSubmissions.data ?? [])
-      .map((submission) => submission.chore)
-      .filter((id): id is number => id !== null),
+      .filter((submission): submission is Submission & { chore: number } =>
+        submission.chore !== null,
+      )
+      .map((submission) => [submission.chore, submission]),
   )
 
   const closeConfirm = () => setConfirmTarget(null)
@@ -68,6 +73,17 @@ export function ChildChoreScreen() {
   const openConfirm = (chore: ChildChore) => {
     setSuccessMessage(null)
     setConfirmTarget(chore)
+  }
+
+  const closeApproval = () => setApprovalTarget(null)
+  const handleDecided = (submission: DecidedSubmission) => {
+    closeApproval()
+    setSuccessMessage(
+      submission.status === 'approved'
+        ? `"${submission.chore_name}" was approved.`
+        : `"${submission.chore_name}" was rejected.`,
+    )
+    void queryClient.invalidateQueries({ queryKey: PENDING_SUBMISSIONS_QUERY_KEY })
   }
 
   let body: ReactNode
@@ -105,7 +121,7 @@ export function ChildChoreScreen() {
     body = (
       <ul className="chore-list">
         {chores.data.map((chore) => {
-          const isPending = pendingChoreIds.has(chore.id)
+          const pendingSubmission = pendingSubmissionByChoreId.get(chore.id)
           return (
             <li key={chore.id}>
               <Card className="chore-card">
@@ -116,10 +132,19 @@ export function ChildChoreScreen() {
                   <CardDescription>{pointsLabel(chore.points)}</CardDescription>
                 </CardHeader>
                 <CardFooter className="chore-card-actions">
-                  {isPending ? (
-                    <span className="submit-chore-pending-badge" role="status">
-                      Pending review
-                    </span>
+                  {pendingSubmission !== undefined ? (
+                    <>
+                      <span className="submit-chore-pending-badge" role="status">
+                        Pending review
+                      </span>
+                      <Button
+                        aria-label={`Get ${chore.name} approved now`}
+                        onClick={() => setApprovalTarget(pendingSubmission)}
+                        variant="secondary"
+                      >
+                        Get approved now
+                      </Button>
+                    </>
                   ) : (
                     <Button
                       aria-label={`Mark ${chore.name} as done`}
@@ -156,6 +181,18 @@ export function ChildChoreScreen() {
           }}
           onSubmitted={handleSubmitted}
           open={confirmTarget !== null}
+        />
+      ) : null}
+      {approvalTarget !== null ? (
+        <ChildDeviceDecisionDialog
+          onDecided={handleDecided}
+          onOpenChange={(open) => {
+            if (!open) {
+              closeApproval()
+            }
+          }}
+          open={approvalTarget !== null}
+          submission={approvalTarget}
         />
       ) : null}
     </div>

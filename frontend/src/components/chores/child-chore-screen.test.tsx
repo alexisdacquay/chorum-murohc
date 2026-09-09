@@ -324,6 +324,89 @@ describe('marking a chore done', () => {
     expect(firstKey).toBe(secondKey)
   })
 
+  test('a chore with a pending submission also offers "Get approved now"', async () => {
+    fetchSpy.mockImplementation(
+      route({
+        'GET /api/v1/chores/': () => jsonResponse([CHORE_A]),
+        'GET /api/v1/submissions/': () => jsonResponse([SUBMISSION_A]),
+      }),
+    )
+    renderScreen()
+
+    await waitFor(() => expect(screen.getByText('Pending review')).toBeDefined())
+    expect(
+      screen.getByRole('button', { name: 'Get Wash dishes approved now' }),
+    ).toBeDefined()
+  })
+
+  test('getting a chore approved on this device names the parent as the actor, not the child', async () => {
+    fetchSpy.mockImplementation(
+      route({
+        'GET /api/v1/chores/': () => jsonResponse([CHORE_A]),
+        'GET /api/v1/submissions/': () => jsonResponse([SUBMISSION_A]),
+        'GET /api/v1/approving-parents/': () =>
+          jsonResponse([{ id: 5, username: 'mum', available: true }]),
+        'POST /api/v1/submissions/91/decide/': (init) => {
+          const body = JSON.parse(init!.body as string) as Record<string, unknown>
+          expect(body.decision).toBe('approve')
+          expect(body.approving_parent).toBe(5)
+          expect(body.pin).toBe('3947')
+          return jsonResponse({
+            id: 91,
+            chore_name: 'Wash dishes',
+            chore_points: 10,
+            note: '',
+            status: 'approved',
+            rejection_reason: '',
+            created_at: SUBMISSION_A.created_at,
+            decided_at: '2026-09-02T00:00:00Z',
+          })
+        },
+      }),
+    )
+    renderScreen()
+
+    await waitFor(() => expect(screen.getByText('Pending review')).toBeDefined())
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Get Wash dishes approved now' }),
+    )
+    const dialog = await screen.findByRole('dialog')
+    await waitFor(() => expect(within(dialog).getByText('mum')).toBeDefined())
+
+    fireEvent.click(within(dialog).getByRole('radio', { name: /mum/ }))
+    fireEvent.change(within(dialog).getByLabelText('Parent PIN'), {
+      target: { value: '3947' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Approve' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.getByText('"Wash dishes" was approved.')).toBeDefined()
+  })
+
+  test('an empty parent list says so and the PIN field stays disabled', async () => {
+    fetchSpy.mockImplementation(
+      route({
+        'GET /api/v1/chores/': () => jsonResponse([CHORE_A]),
+        'GET /api/v1/submissions/': () => jsonResponse([SUBMISSION_A]),
+        'GET /api/v1/approving-parents/': () => jsonResponse([]),
+      }),
+    )
+    renderScreen()
+
+    await waitFor(() => expect(screen.getByText('Pending review')).toBeDefined())
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Get Wash dishes approved now' }),
+    )
+    const dialog = await screen.findByRole('dialog')
+
+    await waitFor(() =>
+      expect(
+        within(dialog).getByText('No parent is available to approve right now.'),
+      ).toBeDefined(),
+    )
+    expect(within(dialog).getByLabelText('Parent PIN')).toHaveProperty('disabled', true)
+  })
+
   test('double-clicking confirm sends only one request', async () => {
     let posts = 0
     fetchSpy.mockImplementation(

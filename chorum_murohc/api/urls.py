@@ -29,7 +29,12 @@ from chorum_murohc.api.rewards import (
     RewardReactivateView,
 )
 from chorum_murohc.api.session import LoginView, LogoutView, SessionView
-from chorum_murohc.api.submissions import SubmissionListView
+from chorum_murohc.api.submissions import (
+    ApprovingParentListView,
+    PendingApprovalListView,
+    SubmissionDecisionView,
+    SubmissionListView,
+)
 from chorum_murohc.api.views import health
 
 app_name = 'api_v1'
@@ -53,6 +58,17 @@ urlpatterns = [
         name='chore-reactivate',
     ),
     path('submissions/', SubmissionListView.as_view(), name='submission-list'),
+    path(
+        'submissions/<int:pk>/decide/',
+        SubmissionDecisionView.as_view(),
+        name='submission-decide',
+    ),
+    path('approvals/', PendingApprovalListView.as_view(), name='approval-list'),
+    path(
+        'approving-parents/',
+        ApprovingParentListView.as_view(),
+        name='approving-parent-list',
+    ),
     path('household-members/', MemberListView.as_view(), name='member-list'),
     path(
         'household-members/<int:pk>/',
