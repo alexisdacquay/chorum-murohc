@@ -29,11 +29,17 @@ Python plus the browser.
     pnpm --dir frontend build
     python3 -m browser_journeys.run_journeys /path/to/worktree
 
-That runs the five journeys. Name journeys to run a subset, and pass
-`--chrome` for a browser at another path:
+That runs the five journeys. The runner finds Google Chrome or Chromium on
+PATH, the standard macOS application path, or the managed browser directory
+under the current user's home. Name journeys to run a subset, and pass
+`--chrome` for a browser somewhere else:
 
     python3 -m browser_journeys.run_journeys . reward creature
     python3 -m browser_journeys.run_journeys . audit-accessibility
+    python3 -m browser_journeys.run_journeys . --chrome /path/to/chrome
+
+The disposable container's uv downloads are cached under the host temporary
+directory. Pass `--uv-cache /another/path` to keep them elsewhere.
 
 | Journey | What it protects |
 | --- | --- |
