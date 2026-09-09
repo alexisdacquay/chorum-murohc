@@ -50,3 +50,26 @@ def ledger_history_for_user(household, user):
     a row.
     """
     return entries_for_user(household, user).order_by('-created_at', '-id')
+
+
+def lifetime_points_earned_for_user(household, user):
+    """Return the lifetime points `user` has ever earned in `household`.
+
+    Only positive entries count: a chore credit or an interest payout, the
+    two ways a balance grows today. A later debit of any reason, current or
+    future, is simply excluded rather than netted against this figure, so
+    spending points never lowers it. This is what `progression` builds a
+    level on (issue #61's decided policy: "the level is a function of
+    LIFETIME points earned, not the current balance, so spending never
+    demotes anyone"), and it is deliberately not `balance_for_user` with the
+    negatives dropped after the fact, since a future debit reason could in
+    principle be positive and must not be counted as earned.
+
+    A user with no positive entry has earned `0`, never `None`.
+    """
+    total = (
+        entries_for_user(household, user)
+        .filter(amount__gt=0)
+        .aggregate(total=Sum('amount'))['total']
+    )
+    return 0 if total is None else total

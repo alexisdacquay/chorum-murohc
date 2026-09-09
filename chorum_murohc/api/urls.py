@@ -15,6 +15,7 @@ from chorum_murohc.api.members import (
     MemberReactivateView,
 )
 from chorum_murohc.api.pin import PinView
+from chorum_murohc.api.progression import ProgressionAcknowledgeView, ProgressionView
 from chorum_murohc.api.redemptions import (
     RedemptionCancelView,
     RedemptionFulfilView,
@@ -92,5 +93,11 @@ urlpatterns = [
         'redemptions/<int:pk>/cancel/',
         RedemptionCancelView.as_view(),
         name='redemption-cancel',
+    ),
+    path('progression/', ProgressionView.as_view(), name='progression'),
+    path(
+        'progression/acknowledge/',
+        ProgressionAcknowledgeView.as_view(),
+        name='progression-acknowledge',
     ),
 ]

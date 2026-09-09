@@ -623,6 +623,46 @@
     line-height: var(--text-sm--line-height);
   }
 
+  .levels-status {
+    color: var(--color-foreground-muted);
+  }
+
+  .levels-error {
+    display: grid;
+    min-inline-size: 0;
+    justify-items: start;
+    gap: var(--spacing-3);
+  }
+
+  .levels-card {
+    inline-size: 100%;
+    max-inline-size: calc(var(--spacing-12) * 10);
+  }
+
+  .levels-card-content {
+    display: grid;
+    min-inline-size: 0;
+    gap: var(--spacing-2);
+  }
+
+  .levels-progress-bar {
+    display: block;
+    inline-size: 100%;
+    block-size: var(--spacing-3);
+    border: none;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    accent-color: var(--color-accent);
+    background: var(--color-surface-muted);
+  }
+
+  .levels-lifetime-points {
+    margin: 0;
+    color: var(--color-foreground-muted);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
 }
 
 @media (min-width: 48rem) {
