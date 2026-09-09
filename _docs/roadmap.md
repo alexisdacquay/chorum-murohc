@@ -107,6 +107,15 @@
 - [ ] Second authentication factor or single sign-on. Session cookies are the
       only authentication factor today. No owner yet; adoption needs its own
       approved task.
+- [ ] Request-rate control on submission creation, redemption, and PIN
+      verification. Only login is throttled today. Accepted for now
+      (S-05, [#160](https://github.com/alexisdacquay/chorum-murohc/issues/160)):
+      PIN guessing is already bounded by the per-parent lockout and every
+      financial write already requires a unique idempotency key, so the
+      remaining gap is request volume alone, from an already-authenticated
+      household member, on a single small machine serving one family. No
+      owner yet; revisit if the product ever gains an anonymous-reachable
+      mutation or leaves trusted household devices.
 - [ ] Independent human security review. The T018 policy was accepted by the
       product owner without a separate third-party reviewer, recorded in
       [issue #18](https://github.com/alexisdacquay/chorum-murohc/issues/18#issuecomment-5584623381).

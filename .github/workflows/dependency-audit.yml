@@ -1,0 +1,79 @@
+name: Dependency audit
+
+on:
+  schedule:
+    # Every Monday, off the hour so this run does not queue behind every
+    # workflow scheduled at :00 across GitHub (S-03).
+    - cron: '17 4 * * 1'
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: Backend dependencies
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container:
+      image: python:3.13.12-slim-bookworm@sha256:a58daefb915e1e03ad48f3ca4df8832065412c5c35cacb9d39f4229184de12b6
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: 0.12.10
+          enable-cache: false
+          github-token: ''
+
+      - name: Install locked backend dependencies
+        run: uv sync --locked
+
+      - name: Audit uv.lock for known vulnerabilities
+        # pip-audit is run from an ephemeral tool environment (--with), never
+        # added to pyproject.toml or uv.lock: it audits the locked
+        # dependencies, so it must not become one itself.
+        run: uv run --locked --with pip-audit pip-audit --strict
+
+  frontend:
+    name: Frontend dependencies
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm and Node.js
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          version: 11.19.0
+          runtime: node@24.15.0
+          working-directory: frontend
+          cache: false
+          install: false
+
+      - name: Install locked frontend dependencies
+        run: pnpm --dir frontend install --frozen-lockfile
+
+      - name: Audit pnpm-lock.yaml for known vulnerabilities
+        # pnpm already ships an audit command; no new dependency for this
+        # half either.
+        run: pnpm --dir frontend audit

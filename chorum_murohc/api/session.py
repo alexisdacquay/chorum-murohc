@@ -26,7 +26,8 @@ generic detail, so no response reveals whether an account exists.
 
 The login abuse control counts failed attempts only. A caller already over
 the limit is refused before any authentication work; a login that succeeds
-spends nothing.
+spends nothing. Every refused login also writes one non-secret log line
+through `chorum_murohc.api.security_logging` (S-04).
 """
 
 from django.contrib.auth import authenticate
@@ -42,6 +43,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from chorum_murohc.api.permissions import resolve_membership
+from chorum_murohc.api.security_logging import log_refusal
 from chorum_murohc.api.serializers import LoginSerializer
 from chorum_murohc.api.throttling import LoginBurstThrottle, LoginSustainedThrottle
 from chorum_murohc.identity.models import Household, Membership
@@ -215,6 +217,7 @@ class LoginView(_SessionAPIView):
         """
         for throttle in self.get_throttles():
             throttle.record_failure(self.request, self)
+        log_refusal(self.request, status.HTTP_400_BAD_REQUEST, 'login_failed')
         return _login_failed()
 
     def post(self, request):

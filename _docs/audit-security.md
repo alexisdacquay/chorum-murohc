@@ -1,9 +1,12 @@
 # Security Audit - current scope
 
-> **Status:** Findings only (T095). Nothing here is fixed by the audit.
+> **Status:** T095's five findings, fixed. Four closed (S-01 to S-04); one
+> (S-05) evaluated and accepted as a residual risk rather than built. See
+> issue [#160](https://github.com/alexisdacquay/chorum-murohc/issues/160).
 >
-> **Date:** 2026-09-09, re-run against `1ec2d24` once the parent overview and
-> activity screens landed; the findings did not change.
+> **Date:** 2026-09-09, re-run after the S-01 to S-05 fix pass, against
+> `262e43d` (the parent overview and activity screens re-run) plus the fix
+> itself.
 > **Method:** live browser probes
 > (`python3 -m browser_journeys.run_journeys . audit-security`),
 > `manage.py check --deploy` against a production configuration, and a source
@@ -30,6 +33,9 @@ application rather than a test client:
 - A signed-out caller gets 403 from a product route.
 - `X-Content-Type-Options`, `Referrer-Policy` and `X-Frame-Options` are all
   sent on API responses.
+- `Content-Security-Policy: default-src 'self'` is sent on every response,
+  including a 404 and an admin page; no directive names `unsafe-inline` or
+  `unsafe-eval` (S-01, closed).
 
 Confirmed by reading the source:
 
@@ -37,7 +43,17 @@ Confirmed by reading the source:
   so there is no external-action boundary to abuse.
 - No `dangerouslySetInnerHTML`, no `innerHTML` write, no `eval`, and no
   `localStorage` or `sessionStorage` use in product frontend code.
-- No secret, key or `.env` file is tracked, and no product module logs.
+- No secret, key or `.env` file is tracked. A refused login, a cross-role
+  permission denial, an unauthenticated request and a missing CSRF token each
+  write one structured log line naming the method, path and status code;
+  none carries a credential, PIN, cookie or household content
+  (`chorum_murohc.api.security_logging`; S-04, closed).
+- `manage.py check --deploy` against a production configuration reports no
+  issues (one, `security.W021`, is deliberately silenced; see S-02 below).
+- `uv.lock` and `pnpm-lock.yaml` are both scanned for known vulnerabilities on
+  a schedule and on every pull request
+  (`.github/workflows/dependency-audit.yml`); both currently report none
+  (S-03, closed).
 - PIN comparison happens only in `identity.services.verify_pin`, under a row
   lock, with a five-failure fifteen-minute per-parent lockout; the hash never
   leaves the model.
@@ -52,13 +68,16 @@ Confirmed by reading the source:
 
 ## Findings
 
-| Id | Severity | Boundary | What happens | Expected | Regression test |
-| --- | --- | --- | --- | --- | --- |
-| S-01 | Medium | Browser to Django | No `Content-Security-Policy` header is sent. React escaping and the absence of any raw-HTML sink are the only defence against an injected script | A CSP that at minimum forbids inline script and restricts `default-src` to `self` | Extend the `audit-security` journey's header probe to require the header and its directives |
-| S-02 | Medium | Production transport | `SECURE_HSTS_SECONDS` and `SECURE_SSL_REDIRECT` are unset, so `manage.py check --deploy` warns W004 and W008. The cookies are Secure in production, but nothing forces HTTPS or pins it | Both set for production, and `check --deploy` clean apart from a deliberately silenced check | A settings test asserting both values under `DJANGO_ENVIRONMENT=production` |
-| S-03 | Medium | Supply chain | Nothing scans `uv.lock` or `pnpm-lock.yaml` for known vulnerabilities. There is no Dependabot configuration and no audit step in CI | A scheduled advisory check on both lockfiles, failing or reporting on a known vulnerability | The scan itself is the test; assert it runs on a pull request |
-| S-04 | Low | Operations | No logging is configured. A burst of 403s, CSRF rejections or throttled logins leaves no trace outside the product audit table, which records successful mutations rather than refused attempts | A minimal structured log of refused authentication, CSRF and permission events, carrying no secret or household content | A test asserting a refused login emits one non-secret log record |
-| S-05 | Low | Availability | Only login is rate limited. Submission creation, redemption and PIN verification have no request-rate control; PIN guessing is bounded by the per-parent lockout, and duplicate writes by unique idempotency keys, but a signed-in account can still generate unbounded requests | A bounded control on the unsafe product endpoints, or a recorded acceptance that a signed-in family member is trusted not to flood | An API test asserting the chosen control refuses the N+1st request |
+Zero open findings. Four fixed (S-01 to S-04); one (S-05) evaluated and
+accepted rather than built, tracked as a residual risk below.
+
+| Id | Severity | Boundary | What happened | Expected | Regression test | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| S-01 | Medium | Browser to Django | No `Content-Security-Policy` header is sent. React escaping and the absence of any raw-HTML sink are the only defence against an injected script | A CSP that at minimum forbids inline script and restricts `default-src` to `self` | Extend the `audit-security` journey's header probe to require the header and its directives | Closed. `config/middleware.py` sends `Content-Security-Policy: default-src 'self'` on every response, no dependency added; `config/tests/test_middleware.py` and the extended journey probe both assert the exact directive, not just presence |
+| S-02 | Medium | Production transport | `SECURE_HSTS_SECONDS` and `SECURE_SSL_REDIRECT` are unset, so `manage.py check --deploy` warns W004 and W008. The cookies are Secure in production, but nothing forces HTTPS or pins it | Both set for production, and `check --deploy` clean apart from a deliberately silenced check | A settings test asserting both values under `DJANGO_ENVIRONMENT=production` | Closed. Both set production-only in `config/settings.py`; `check --deploy` now reports zero issues with one deliberately silenced (`security.W021`, HSTS preload-list submission - a near-irreversible step this project has not decided to take); `config/tests/test_settings.py` asserts both settings and the one silenced check |
+| S-03 | Medium | Supply chain | Nothing scans `uv.lock` or `pnpm-lock.yaml` for known vulnerabilities. There is no Dependabot configuration and no audit step in CI | A scheduled advisory check on both lockfiles, failing or reporting on a known vulnerability | The scan itself is the test; assert it runs on a pull request | Closed. `.github/workflows/dependency-audit.yml` runs `pip-audit` (an ephemeral `uv run --with` tool, never added to `pyproject.toml`) and `pnpm audit` (already shipped with pnpm) on a weekly schedule and on every pull request; `config/tests/test_dependency_audit_workflow.py` asserts the triggers, the pinning and that both commands actually run |
+| S-04 | Low | Operations | No logging is configured. A burst of 403s, CSRF rejections or throttled logins leaves no trace outside the product audit table, which records successful mutations rather than refused attempts | A minimal structured log of refused authentication, CSRF and permission events, carrying no secret or household content | A test asserting a refused login emits one non-secret log record | Closed. `chorum_murohc.api.security_logging` logs every refused authentication, CSRF and permission event (one line: method, path, status code, no secret or household content) through a wrapped `EXCEPTION_HANDLER` plus one explicit call on the login-failure path; `chorum_murohc/api/test_security_logging.py` covers a refused login, a cross-role denial, a missing CSRF token, an unauthenticated caller and a throttled response |
+| S-05 | Low | Availability | Only login is rate limited. Submission creation, redemption and PIN verification have no request-rate control; PIN guessing is bounded by the per-parent lockout, and duplicate writes by unique idempotency keys, but a signed-in account can still generate unbounded requests | A bounded control on the unsafe product endpoints, or a recorded acceptance that a signed-in family member is trusted not to flood | An API test asserting the chosen control refuses the N+1st request | Accepted, not built. See "Accepted residual risks" below and `_docs/roadmap.md` |
 
 ## Accepted residual risks, rechecked
 
@@ -75,6 +94,7 @@ rechecked independently as T095 requires.
 | No independent human security review; the product owner waived it | [#18](https://github.com/alexisdacquay/chorum-murohc/issues/18#issuecomment-5584623381) | Yes. This audit is the same campaign's own work, not an independent third party | Unchanged. Worth restating rather than quietly retiring |
 | No password change or reset path | [#129](https://github.com/alexisdacquay/chorum-murohc/issues/129) | Yes. A forgotten password needs a parent with database or shell access | Yes for now. A parent can recreate an account; there is no self-service path to abuse |
 | No way to switch between households in one session | [#130](https://github.com/alexisdacquay/chorum-murohc/issues/130) | Yes. An ambiguous membership fails closed, which is the safe direction | Yes. The failure mode is denial, not leakage |
+| Submission creation, redemption and PIN verification carry no request-rate control; only login is throttled (S-05) | [#160](https://github.com/alexisdacquay/chorum-murohc/issues/160) | Yes. Verified: `IsHouseholdChild` / `IsHouseholdParentOrChild` gate every one of these routes, so there is no anonymous or cross-household reach; PIN guessing is bounded by `identity.services.verify_pin`'s five-failure lockout; every submission, redemption and ledger write carries a per-user unique idempotency key | Yes, for a two-parent household app on one small machine. Every account is a trusted family member; the worst an unbounded caller can do here is generate noise, since guessing is already locked out and duplicate writes are already blocked. Revisit if the product gains an anonymous-reachable mutation or leaves trusted household devices |
 
 ## Deliberately not covered
 

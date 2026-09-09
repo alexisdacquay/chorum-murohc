@@ -429,6 +429,7 @@ of them independently.
 | No bounded login-abuse control exists until the authentication contract merges | T027 |
 | Parent PIN retry, lockout, and recovery thresholds are undefined, and PIN and approval mutations stay denied until then | T029 |
 | Session cookies are the only authentication factor; there is no second factor and no single sign-on | Unowned; adoption needs its own approved task |
+| Submission creation, redemption, and PIN verification carry no request-rate control; only login is throttled | [issue #160](https://github.com/alexisdacquay/chorum-murohc/issues/160) |
 
 ## Deferred Technology
 

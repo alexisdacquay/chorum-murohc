@@ -103,6 +103,7 @@ AUTH_USER_MODEL = 'identity.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'config.middleware.content_security_policy',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -301,6 +302,22 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = is_production
 CSRF_COOKIE_SECURE = is_production
 
+# Transport hardening (S-02). Development serves plain HTTP over the Django
+# dev server, so forcing a redirect or advertising HSTS there would break it;
+# both are production only, exactly like the cookie Secure flags above.
+# A year, and including subdomains, is the standard HSTS starting point.
+SECURE_SSL_REDIRECT = is_production
+SECURE_HSTS_SECONDS = 60 * 60 * 24 * 365 if is_production else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = is_production
+
+# `check --deploy` also warns W021 unless `SECURE_HSTS_PRELOAD` is True, but
+# that setting exists to signal actual submission to the browser vendors'
+# hardcoded preload list - a near-irreversible step (removal takes months
+# and every browser release) for a household app that may not even sit on a
+# stable public domain. Silenced deliberately rather than set for a
+# consequence this project has not decided to take on.
+SILENCED_SYSTEM_CHECKS = ['security.W021']
+
 
 # Caches
 # https://docs.djangoproject.com/en/5.2/topics/cache/
@@ -324,6 +341,13 @@ CACHES = {
 # Django REST Framework
 
 REST_FRAMEWORK = {
+    # Wraps DRF's own exception handler to log every refused authentication,
+    # CSRF and permission event (S-04); see
+    # `chorum_murohc.api.security_logging`. The response every endpoint
+    # returns is unchanged.
+    'EXCEPTION_HANDLER': (
+        'chorum_murohc.api.security_logging.logging_exception_handler'
+    ),
     # Login is the only throttled endpoint, so no default throttle class is
     # registered here. Both scopes are keyed on the client address and never
     # on the submitted username: keying on a name would let an attacker lock
@@ -336,6 +360,42 @@ REST_FRAMEWORK = {
     # alone, so a forged `X-Forwarded-For` cannot buy a fresh allowance.
     # Raise this only for a known, counted reverse proxy in front of Django.
     'NUM_PROXIES': 0,
+}
+
+
+# Logging (S-04)
+# https://docs.djangoproject.com/en/5.2/topics/logging/
+#
+# One logger, one handler, always on: not gated by DEBUG the way Django's own
+# default console handler is, since a refusal in production is exactly what
+# this exists to show. `chorum_murohc.api.security_logging` is the only
+# writer; it logs a method, a path and a status code, never a secret or any
+# household content. `propagate=False` keeps every line out of Django's own
+# `django` logger, so it is never duplicated into `mail_admins` or anywhere
+# else a later change to the root logging config might send it.
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'security': {
+            'format': '{asctime} {levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'security_console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'security',
+        },
+    },
+    'loggers': {
+        'chorum_murohc.security': {
+            'handlers': ['security_console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
 }
 
 
