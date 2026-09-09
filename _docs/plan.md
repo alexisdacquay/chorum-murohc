@@ -1,6 +1,8 @@
 # Chorum-murohc - Project Plan
 
-> **Status:** Planning
+> **Status:** Built. Every requirement below is implemented and driven end
+> to end in a browser; `_docs/plan-verification.md` holds the evidence, and
+> `README.md` says how to run it.
 
 ## Overview
 
@@ -12,8 +14,10 @@ Household chore management web app with a points economy, gamification, and crea
   implementation language.
 - The selected frontend, data, testing, and architectural choices are recorded
   in the [design document](design.md).
-- Development begins locally, with containerised and distributed operation
-  treated as a long-term evolution rather than an immediate requirement.
+- The application runs as one container next to PostgreSQL, started with a
+  single `docker compose` command on one small machine (`README.md`).
+  Distributed operation across more than one machine remains a long-term
+  possibility rather than a requirement.
 
 ## Users & Auth
 
@@ -49,25 +53,43 @@ Household chore management web app with a points economy, gamification, and crea
 
 ### Interest
 
-- Unspent points earn 20% monthly interest
-- Interest accrues daily
-- Each creature level grants +30% to the interest rate
-- Example: level 10 = base 20% + 300% = 320% monthly interest
-- Intent: strongly incentivise saving over spending
+Approved in [issue #49](https://github.com/alexisdacquay/chorum-murohc/issues/49)
+and stated exactly in `_docs/interest-policy.md`, which replaced this plan's
+original monthly, daily-accruing, level-scaled draft before anything was
+built.
+
+- Unspent points earn 2% once a week, against the balance held when the
+  accrual runs. No compounding within the week.
+- Floored to whole points, and capped at 20 points from one accrual.
+- A balance of zero or less earns nothing.
+- No level bonus: every child earns the same rate.
+- Intent, unchanged: incentivise saving over spending.
 
 ### Spending - Rewards
 
-- 1 point = 1 minute of video game time
-- 200 points = £5 pocket money
-- No other reward types
+Approved in [issue #55](https://github.com/alexisdacquay/chorum-murohc/issues/55),
+which replaced this plan's two fixed conversions with a catalogue the
+household writes itself.
 
-### Spending - Leveling Up
+- Parents define the rewards: each one has a name and a point cost. Game
+  time and pocket money are two rows a parent can add, not the only two
+  possibilities.
+- A child redeems a reward when their balance covers it, and the ledger is
+  debited at redemption.
+- A parent then fulfils the reward off-app, or cancels it and returns the
+  points.
 
-- Leveling consumes points (single currency, no separate XP)
-- Level 1 costs 500 points
-- Level 2 costs 510 additional points
-- Mild escalation per level
-- Approximately 30-40 levels total
+### Leveling Up
+
+Approved in [issue #61](https://github.com/alexisdacquay/chorum-murohc/issues/61),
+which replaced this plan's bought levels with earned ones, so that spending
+points on a reward no longer costs a child their progress.
+
+- A level is earned from lifetime points, never bought with them. Spending
+  never demotes anyone.
+- Ten levels, at 50, 150, 300, 500, 750, 1050, 1400, 1800, 2250 and 2750
+  lifetime points.
+- Points remain a single currency; there is no separate experience score.
 
 ## Creature System
 

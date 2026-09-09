@@ -40,6 +40,11 @@ else:
             'DJANGO_SECRET_KEY' in os.environ
             and settings.SECRET_KEY == os.environ['DJANGO_SECRET_KEY']
         ),
+        'secret_matches_file': (
+            'DJANGO_SECRET_KEY_FILE' in os.environ
+            and Path(os.environ['DJANGO_SECRET_KEY_FILE']).read_text().strip()
+            == settings.SECRET_KEY
+        ),
         'debug': settings.DEBUG,
         'allowed_hosts': settings.ALLOWED_HOSTS,
         'database_engine': database['ENGINE'],
@@ -71,7 +76,12 @@ else:
         'secure_ssl_redirect': settings.SECURE_SSL_REDIRECT,
         'secure_hsts_seconds': settings.SECURE_HSTS_SECONDS,
         'secure_hsts_include_subdomains': settings.SECURE_HSTS_INCLUDE_SUBDOMAINS,
+        'secure_proxy_ssl_header': settings.SECURE_PROXY_SSL_HEADER,
         'silenced_system_checks': settings.SILENCED_SYSTEM_CHECKS,
+        'use_https': settings.USE_HTTPS,
+        'x_frame_options': settings.X_FRAME_OPTIONS,
+        'static_root': str(settings.STATIC_ROOT),
+        'frontend_dist': str(settings.FRONTEND_DIST),
         'cache_aliases': sorted(settings.CACHES),
         'login_throttle_cache': settings.CACHES.get('login_throttle'),
         'rest_framework_keys': sorted(settings.REST_FRAMEWORK),
@@ -939,3 +949,144 @@ def test_refusals_are_logged_through_the_security_exception_handler():
     # Always on, not gated by DEBUG the way Django's own default console
     # handler is: a refusal in production is exactly what this is for.
     assert result['security_logger_handlers'] == ['security_console']
+
+
+# The deployment settings (issue #158): one switch for the transport, and a
+# secret key the container can generate for itself.
+
+
+def test_the_https_switch_owns_every_transport_rule_in_production():
+    result = settings_probe(production_environment())
+
+    assert result['use_https'] is True
+    assert result['session_cookie_secure'] is True
+    assert result['csrf_cookie_secure'] is True
+    assert result['secure_ssl_redirect'] is True
+    assert result['secure_hsts_seconds'] == 60 * 60 * 24 * 365
+    assert result['secure_hsts_include_subdomains'] is True
+    assert result['secure_proxy_ssl_header'] == ['HTTP_X_FORWARDED_PROTO', 'https']
+    # Preload is left unset on purpose by S-02, which silences W021 instead.
+    assert result['silenced_system_checks'] == ['security.W021']
+
+
+def test_a_plain_http_deployment_turns_every_transport_rule_off_together():
+    # A household on its own network over plain HTTP, which is what the
+    # shipped compose file is. A Secure cookie is never sent over HTTP and
+    # the redirect would loop, so all of it goes together or not at all.
+    environment = production_environment()
+    environment['DJANGO_HTTPS'] = 'false'
+
+    result = settings_probe(environment)
+
+    assert result['use_https'] is False
+    assert result['session_cookie_secure'] is False
+    assert result['csrf_cookie_secure'] is False
+    assert result['secure_ssl_redirect'] is False
+    assert result['secure_hsts_seconds'] == 0
+    assert result['secure_hsts_include_subdomains'] is False
+    assert result['secure_proxy_ssl_header'] is None
+
+
+def test_development_can_be_asked_for_https():
+    result = settings_probe({'DJANGO_HTTPS': 'on'})
+
+    assert result['use_https'] is True
+    assert result['session_cookie_secure'] is True
+
+
+@pytest.mark.parametrize('https_value', ['', ' ', 'maybe', 'True ok', '2'])
+def test_an_unknown_https_value_is_rejected(https_value):
+    environment = production_environment()
+    environment['DJANGO_HTTPS'] = https_value
+
+    result = settings_probe(environment)
+
+    assert result['status'] == 'error'
+    assert result['message'] == 'DJANGO_HTTPS is invalid.'
+
+
+def test_nothing_may_be_framed():
+    assert settings_probe()['x_frame_options'] == 'DENY'
+
+
+def test_the_deployment_paths_are_where_the_build_writes():
+    result = settings_probe()
+
+    assert result['static_root'] == str(PROJECT_ROOT / 'staticfiles')
+    assert result['frontend_dist'] == str(PROJECT_ROOT / 'frontend' / 'dist')
+
+
+def test_the_production_default_satisfies_the_deployment_check():
+    environment = production_environment()
+    # The deployment check reads the key itself: it wants at least fifty
+    # characters and real variety, which is what the container generates.
+    environment['DJANGO_SECRET_KEY'] = (
+        'deployment-check-secret-of-a-realistic-length-0123456789'
+    )
+
+    completed = subprocess.run(
+        [sys.executable, 'manage.py', 'check', '--deploy'],
+        cwd=PROJECT_ROOT,
+        env=CHILD_ENVIRONMENT | environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    # One silenced check, W021, and nothing else to say.
+    assert 'System check identified no issues (1 silenced).' in (
+        completed.stdout + completed.stderr
+    )
+
+
+def test_production_reads_the_secret_key_from_the_named_file(tmp_path):
+    key_file = tmp_path / 'secret_key'
+    key_file.write_text('a-generated-key-from-the-state-volume\n')
+    environment = production_environment()
+    del environment['DJANGO_SECRET_KEY']
+    environment['DJANGO_SECRET_KEY_FILE'] = str(key_file)
+
+    result = settings_probe(environment)
+
+    assert result['status'] == 'ok'
+    # The trailing newline the generator writes is not part of the key.
+    assert result['secret_matches_file'] is True
+    assert result['uses_local_secret_fallback'] is False
+
+
+def test_the_secret_key_variable_wins_when_both_are_given(tmp_path):
+    key_file = tmp_path / 'secret_key'
+    key_file.write_text('the-file-key')
+    environment = production_environment()
+    environment['DJANGO_SECRET_KEY_FILE'] = str(key_file)
+
+    result = settings_probe(environment)
+
+    assert result['secret_matches_environment'] is True
+    assert result['secret_matches_file'] is False
+
+
+@pytest.mark.parametrize('contents', ['', '   \n'])
+def test_an_empty_secret_key_file_is_rejected(tmp_path, contents):
+    key_file = tmp_path / 'secret_key'
+    key_file.write_text(contents)
+    environment = production_environment()
+    del environment['DJANGO_SECRET_KEY']
+    environment['DJANGO_SECRET_KEY_FILE'] = str(key_file)
+
+    result = settings_probe(environment)
+
+    assert result['status'] == 'error'
+    assert result['message'] == 'DJANGO_SECRET_KEY_FILE is invalid.'
+
+
+def test_a_missing_secret_key_file_is_rejected(tmp_path):
+    environment = production_environment()
+    del environment['DJANGO_SECRET_KEY']
+    environment['DJANGO_SECRET_KEY_FILE'] = str(tmp_path / 'never-written')
+
+    result = settings_probe(environment)
+
+    assert result['status'] == 'error'
+    assert result['message'] == 'DJANGO_SECRET_KEY_FILE is invalid.'

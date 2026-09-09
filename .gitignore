@@ -210,6 +210,9 @@ tempCodeRunnerFile.py
 /frontend/node_modules/
 /frontend/dist/
 
+# collectstatic output; the image builds its own copy
+/staticfiles/
+
 # PyPI configuration file
 .pypirc
 
