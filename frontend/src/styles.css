@@ -565,6 +565,13 @@
     overflow-wrap: anywhere;
   }
 
+  /* 2.5.8 target size (minimum): a bare checkbox defaults to 13x13 CSS px. */
+  .chore-pool-filter input[type='checkbox'] {
+    flex-shrink: 0;
+    inline-size: var(--spacing-6);
+    block-size: var(--spacing-6);
+  }
+
   .chore-pool-status {
     color: var(--color-foreground-muted);
   }

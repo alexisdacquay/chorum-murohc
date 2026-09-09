@@ -221,6 +221,30 @@ describe('RoleRouter signed-out and fail-closed states', () => {
     expect(screen.queryByRole('navigation')).toBeNull()
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull()
   })
+
+  test('leaves a directly loaded route alone while the session is still pending, then opens it (A-03)', () => {
+    goTo('/points')
+    pushState.mockClear()
+    replaceState.mockClear()
+    const { rerender } = render(
+      <RoleRouter currentUser={undefined} isLoading />,
+    )
+
+    // The bug: role is unresolved while loading, so every path looks
+    // signed-out. Acting on that before the session settles would rewrite
+    // a bookmark, refresh, or shared link to /sign-in and lose it for
+    // good, even though the viewer turns out to be allowed on it.
+    expect(window.location.pathname).toBe('/points')
+    expect(replaceState).not.toHaveBeenCalled()
+
+    rerender(<RoleRouter currentUser={child} isLoading={false} />)
+
+    expect(window.location.pathname).toBe('/points')
+    expect(replaceState).not.toHaveBeenCalled()
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Points',
+    )
+  })
 })
 
 describe('RoleRouter allowed roles', () => {

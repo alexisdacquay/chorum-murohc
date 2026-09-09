@@ -292,7 +292,14 @@ export function RoleRouter({
   const needsRewrite = canonicalPath !== pathname
 
   useEffect(() => {
-    if (!needsRewrite) {
+    // The session request has not settled, so `role` is provisionally
+    // `null` and every path resolves to the signed-out destination. Acting
+    // on that now would rewrite the requested URL to /sign-in before the
+    // real role is known, permanently losing a bookmark, a refresh, or a
+    // shared link the moment the session resolves to a role that was
+    // allowed to see it all along (issue #159, A-03). Wait for the real
+    // answer; the effect re-runs once it arrives.
+    if (isLoading || !needsRewrite) {
       return
     }
 
@@ -300,7 +307,7 @@ export function RoleRouter({
     // activation pushes one.
     window.history.replaceState(null, '', canonicalPath)
     setPathname(canonicalPath)
-  }, [canonicalPath, needsRewrite])
+  }, [canonicalPath, isLoading, needsRewrite])
 
   const navigate = useCallback((event: MouseEvent<HTMLAnchorElement>) => {
     if (event.defaultPrevented || event.button !== 0) {

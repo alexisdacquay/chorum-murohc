@@ -181,12 +181,14 @@ describe('marking a chore done', () => {
     expect(screen.getByRole('button', { name: 'Mark Wash dishes as done' })).toBeDefined()
   })
 
-  test('Escape closes the dialog and sends no request', async () => {
+  test('Escape closes the dialog, sends no request, and returns focus to the trigger', async () => {
     fetchSpy.mockImplementation(route({}))
     renderScreen()
 
     await waitFor(() => expect(screen.getByText('Wash dishes')).toBeDefined())
-    fireEvent.click(screen.getByRole('button', { name: 'Mark Wash dishes as done' }))
+    const trigger = screen.getByRole('button', { name: 'Mark Wash dishes as done' })
+    trigger.focus()
+    fireEvent.click(trigger)
     await screen.findByRole('dialog')
 
     fireEvent.keyDown(document, { key: 'Escape' })
@@ -195,6 +197,11 @@ describe('marking a chore done', () => {
     expect(
       fetchSpy.mock.calls.some((call) => call[1]?.method === 'POST'),
     ).toBe(false)
+    // This dialog is only ever in the tree while `confirmTarget !== null`
+    // (issue #159, A-01): the whole `<SubmitChoreDialog>` unmounts the
+    // instant Escape fires, so Radix's own focus-return never gets a
+    // chance to run unless the shared `Dialog` wrapper does it first.
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
   })
 
   test('confirming submits the note, shows success and the pending badge', async () => {

@@ -3,8 +3,8 @@
 > **Status:** Findings only (T094). Nothing here is fixed by the audit; each
 > finding is a separate entry for someone to pick up.
 >
-> **Date:** 2026-09-09, re-run against `1ec2d24` once the parent overview and
-> activity screens landed. **Standard:** WCAG 2.2 level AA.
+> **Date:** 2026-09-09, re-run after issue #159 fixed the four findings this
+> file previously recorded. **Standard:** WCAG 2.2 level AA.
 > **Method:** `python3 -m browser_journeys.run_journeys . audit-accessibility`,
 > headless Chrome 149, plus one keyboard pass and a source read.
 
@@ -32,16 +32,25 @@ Escape, and checking where focus lands.
 
 ## Findings
 
-| Id | Severity | Screen | Criterion | What happens | Expected | How to verify |
-| --- | --- | --- | --- | --- | --- | --- |
-| A-01 | Medium | Every screen with a dialog; observed on child chores | 2.4.3 Focus order | Closing a dialog with Escape leaves focus on `body`. Every dialog in the product is mounted conditionally (`{target !== null ? <Dialog .../> : null}`), so the component unmounts before Radix can restore focus to the trigger | Focus returns to the control that opened the dialog | Run the `audit-accessibility` journey; the finding disappears when the check reports focus back on the trigger |
-| A-02 | Low | Parent chore pool, reward requests, household | 2.5.8 Target size (minimum) | The "Show inactive ..." filter is a bare `input[type=checkbox]` measuring 13x13 CSS px | At least 24x24 CSS px, or a confirmed spacing exemption | Same journey; the automated check does not evaluate 2.5.8's spacing exception, so a fix may equally be a recorded exemption with the measured clearance |
-| A-03 | Medium | Every route | 2.4.5 Multiple ways | Loading a route directly - a bookmark, a refresh, a shared link - lands on the role's start path instead. `RoleRouter` rewrites the URL to `/sign-in` while the session request is still pending, then redirects the now-signed-in viewer to `/chores` or `/overview` | The requested route opens once the session resolves | Same journey: it loads `/points` directly and reports where it landed |
-| A-04 | Low | Parent overview | 1.3.1 Info and relationships | Each child's card heading is an `h3` directly under the screen's `h1`, so the level jumps by two and the outline has a hole where the `h2` should be | An `h2`, or an intermediate `h2` grouping the cards | Run the `audit-accessibility` journey; the heading-order check reports the jump |
+None. `audited every built screen; 0 finding(s)` across all thirteen
+screens, and the keyboard pass reports focus back on the trigger after
+Escape.
 
-Nothing else was found. Contrast, accessible names, text alternatives,
-identifiers, ARIA references and focus visibility were clean on every screen
-measured, and heading order was clean everywhere except A-04.
+## Fixed by issue #159
+
+The four findings this file previously recorded, kept here as the record of
+what was wrong and how it was checked closed.
+
+| Id | Severity | Screen | Criterion | What was wrong | Fix |
+| --- | --- | --- | --- | --- | --- |
+| A-01 | Medium | Every screen with a dialog; observed on child chores | 2.4.3 Focus order | Closing a dialog with Escape left focus on `body`. Radix's own close-focus restoration only ever focuses the DOM node under its own `<DialogTrigger>`, and nothing in this product renders one - every screen opens its dialog from a plain button tied to local state instead, so that restoration was a no-op on every dialog in the product | The shared `Dialog` wrapper (`frontend/src/components/ui/dialog.tsx`) now remembers what was focused before it opened and restores focus there itself on every close path (Escape, an outside click, or a Close control), fixed once for every dialog rather than at each call site |
+| A-02 | Low | Parent chore pool, reward requests, household | 2.5.8 Target size (minimum) | The "Show inactive ..." filter was a bare `input[type=checkbox]` measuring 13x13 CSS px; the reward-requests screen's checkbox also carried a class of its own that no rule styled | Every "Show inactive ..." checkbox now shares one `chore-pool-filter` class, sized to 24x24 CSS px in `styles.css` |
+| A-03 | Medium | Every route | 2.4.5 Multiple ways | Loading a route directly - a bookmark, a refresh, a shared link - landed on the role's start path instead. `RoleRouter` rewrote the URL to `/sign-in` while the session request was still pending, because the role reads as unresolved (not yet signed-out) until it settles | The URL-rewrite effect now waits for the session to settle before acting, so the requested route opens once the real role resolves |
+| A-04 | Low | Parent overview | 1.3.1 Info and relationships | Each child's card heading was an `h3` directly under the screen's `h1`, so the level jumped by two | The card heading is now an `h2`, directly under the `h1` |
+
+Nothing else was found either time. Contrast, accessible names, text
+alternatives, identifiers, ARIA references and focus visibility remain clean
+on every screen measured, and heading order is now clean everywhere.
 
 ## Deliberately not covered
 
