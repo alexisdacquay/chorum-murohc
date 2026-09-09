@@ -663,6 +663,108 @@
     line-height: var(--text-sm--line-height);
   }
 
+  .points-status {
+    color: var(--color-foreground-muted);
+  }
+
+  .points-error {
+    display: grid;
+    min-inline-size: 0;
+    justify-items: start;
+    gap: var(--spacing-3);
+  }
+
+  .points-balance-card {
+    inline-size: 100%;
+    max-inline-size: calc(var(--spacing-12) * 10);
+  }
+
+  .points-balance-figure {
+    margin: 0;
+    color: var(--color-foreground);
+    font-size: var(--text-heading-1);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--text-heading-1--line-height);
+  }
+
+  .points-history {
+    display: grid;
+    min-inline-size: 0;
+    gap: var(--spacing-3);
+  }
+
+  .points-history-title {
+    margin: 0;
+    font-size: var(--text-lead);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--text-lead--line-height);
+  }
+
+  .points-history-list {
+    display: grid;
+    min-inline-size: 0;
+    gap: var(--spacing-2);
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .points-history-card-content {
+    display: flex;
+    min-inline-size: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+  }
+
+  .points-history-details {
+    display: grid;
+    min-inline-size: 0;
+    gap: var(--spacing-1);
+  }
+
+  .points-history-reason {
+    margin: 0;
+    font-weight: var(--font-weight-medium);
+  }
+
+  .points-history-timestamp {
+    margin: 0;
+    color: var(--color-foreground-muted);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .points-history-amount {
+    margin: 0;
+    flex-shrink: 0;
+    font-weight: var(--font-weight-bold);
+  }
+
+  .points-history-amount-credit {
+    color: var(--color-success);
+  }
+
+  .points-history-amount-debit {
+    color: var(--color-danger);
+  }
+
+  .points-pagination {
+    display: flex;
+    min-inline-size: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+  }
+
+  .points-pagination-status {
+    margin: 0;
+    color: var(--color-foreground-muted);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
 }
 
 @media (min-width: 48rem) {

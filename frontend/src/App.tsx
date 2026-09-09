@@ -6,6 +6,7 @@ import { SignOutButton } from './components/auth/sign-out-button'
 import { ChildChoreScreen } from './components/chores/child-chore-screen'
 import { ChorePoolScreen } from './components/chores/chore-pool-screen'
 import { HouseholdScreen } from './components/members/household-screen'
+import { PointsDashboardScreen } from './components/points/points-dashboard-screen'
 import { LevelsScreen } from './components/progression/levels-screen'
 import { ChildRewardsScreen } from './components/rewards/child-rewards-screen'
 import { ParentRewardsScreen } from './components/rewards/parent-rewards-screen'
@@ -15,13 +16,15 @@ import { RoleRouter } from './navigation/role-router'
 // Screens built so far, keyed by their approved route path (issue #37 owns
 // `/chore-pool`, issue #36 owns `/chores`, issue #21 owns `/household`, issue
 // #30 owns `/approval-pin`; issue #55 owns `/rewards` and
-// `/reward-requests`; issue #61 owns `/levels`). Every other approved path
-// still falls back to the router's own neutral placeholder.
+// `/reward-requests`; issue #61 owns `/levels`; issue #49 owns `/points`).
+// Every other approved path still falls back to the router's own neutral
+// placeholder.
 const SCREENS = {
   '/chore-pool': <ChorePoolScreen />,
   '/chores': <ChildChoreScreen />,
   '/household': <HouseholdScreen />,
   '/approval-pin': <PinSettingsScreen />,
+  '/points': <PointsDashboardScreen />,
   '/rewards': <ChildRewardsScreen />,
   '/reward-requests': <ParentRewardsScreen />,
   '/levels': <LevelsScreen />,

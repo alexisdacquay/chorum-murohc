@@ -50,6 +50,10 @@ APP_CONFIGS = {
         'chorum_murohc.creatures.apps.CreaturesConfig',
         'creatures',
     ),
+    'chorum_murohc.interest': (
+        'chorum_murohc.interest.apps.InterestConfig',
+        'interest',
+    ),
 }
 
 ALLOWED_DOMAIN_IMPORTS = {
@@ -61,6 +65,7 @@ ALLOWED_DOMAIN_IMPORTS = {
     'rewards': frozenset({'identity', 'ledger', 'audit'}),
     'progression': frozenset({'identity', 'ledger', 'audit'}),
     'creatures': frozenset({'identity', 'progression', 'audit'}),
+    'interest': frozenset({'identity', 'ledger', 'audit'}),
     # The api package is the top layer. It may import every product package so
     # that one household-role permission primitive can serve every endpoint,
     # including the audit read API. Nothing may import it in return.
@@ -74,6 +79,7 @@ ALLOWED_DOMAIN_IMPORTS = {
             'rewards',
             'progression',
             'creatures',
+            'interest',
         }
     ),
 }
