@@ -48,7 +48,7 @@ unnecessary token-management or cross-origin complexity.
 | Frontend packages | pnpm | JavaScript and TypeScript dependency management |
 | Backend testing | pytest and pytest-django | Unit and integration testing |
 | Frontend testing | Vitest and Testing Library | Component and interaction testing |
-| End-to-end testing | Playwright | Browser-level workflow testing |
+| End-to-end testing | Headless Chrome, driven by `browser_journeys/` | Browser-level workflow testing with no added dependency |
 
 SQLite may remain useful for very early local experiments, but PostgreSQL is
 the selected implementation database so that development and production

@@ -26,6 +26,12 @@ form and data libraries beyond the ones above, MSW, and Axios, ky or SWR.
 
 ## Not yet asked for
 
-React Hook Form and Zod (forms), Motion (only if CSS is demonstrably
-insufficient), and Playwright (end-to-end journeys). Each still needs a
-proposal and an approval before it is installed.
+React Hook Form and Zod (forms) and Motion (only if CSS is demonstrably
+insufficient). Each still needs a proposal and an approval before it is
+installed.
+
+Playwright was on this list for the end-to-end journeys and is no longer
+needed. The browser harness in `browser_journeys/` drives the real product in
+headless Chrome using the standard library and the browser alone, on the same
+pinned-container shape as the layout probe, so no package was added. See
+`browser_journeys/README.md`.
