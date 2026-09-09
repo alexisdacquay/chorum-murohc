@@ -1,3 +1,4 @@
+# ruff: noqa: RUF012
 """Create the table backing the shared login-throttle cache (issue 128).
 
 `createcachetable` is a standalone management command, not something
