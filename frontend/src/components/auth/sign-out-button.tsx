@@ -14,12 +14,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
-import {
-  SessionRequestError,
-  ensureCsrfToken,
-  logout,
-  sessionQueryKey,
-} from '../../api/session'
+import { SessionRequestError, ensureCsrfToken, logout } from '../../api/session'
+import { replaceSession } from '../../api/query-client'
 import { SIGNED_OUT_SESSION } from '../../navigation/role-router'
 import { Button } from '../ui/button'
 import { FormMessage } from '../ui/form-message'
@@ -39,7 +35,10 @@ export function SignOutButton() {
     },
     onSuccess: () => {
       setHasFailed(false)
-      queryClient.setQueryData(sessionQueryKey, SIGNED_OUT_SESSION)
+      // Every cached screen belongs to this account and household; the next
+      // sign-in, on this device or another account's, must not see any of
+      // it flash by before its own fetch replaces it.
+      replaceSession(queryClient, SIGNED_OUT_SESSION)
     },
     onError: (error) => {
       if (
@@ -47,7 +46,7 @@ export function SignOutButton() {
         error.failure === 'forbidden'
       ) {
         setHasFailed(false)
-        queryClient.setQueryData(sessionQueryKey, SIGNED_OUT_SESSION)
+        replaceSession(queryClient, SIGNED_OUT_SESSION)
         return
       }
       setHasFailed(true)

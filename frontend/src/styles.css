@@ -514,6 +514,23 @@
     overflow-wrap: anywhere;
   }
 
+  .shell-household-switcher {
+    display: grid;
+    min-inline-size: 0;
+    justify-items: start;
+    gap: var(--spacing-1);
+    margin-block-start: var(--spacing-3);
+    overflow-wrap: anywhere;
+  }
+
+  .household-picker-list {
+    display: grid;
+    min-inline-size: 0;
+    justify-items: start;
+    gap: var(--spacing-2);
+    margin-block-start: var(--spacing-3);
+  }
+
   .health-status,
   .health-error {
     display: grid;

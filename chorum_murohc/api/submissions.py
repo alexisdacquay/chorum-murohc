@@ -172,12 +172,12 @@ class SubmissionListView(APIView):
 
     def get_permission_household(self, request):
         """The one household the caller may act in, or `None`."""
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         return None if membership is None else membership.household
 
     def require_child_membership(self):
         """Re-resolve the acting child, for use inside a write transaction."""
-        membership = resolve_active_membership(self.request.user)
+        membership = resolve_active_membership(self.request.user, self.request)
         if membership is None or membership.role != Membership.Role.CHILD:
             raise PermissionDenied(PERMISSION_DENIED_DETAIL)
         return membership
@@ -333,7 +333,7 @@ class PendingApprovalListView(ListAPIView):
         super().initial(request, *args, **kwargs)
 
     def get_permission_household(self, request):
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         return None if membership is None else membership.household
 
     def get_queryset(self):
@@ -372,7 +372,7 @@ class ApprovingParentListView(APIView):
         super().initial(request, *args, **kwargs)
 
     def get_permission_household(self, request):
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         return None if membership is None else membership.household
 
     def get(self, request):
@@ -478,11 +478,11 @@ class SubmissionDecisionView(APIView):
         super().initial(request, *args, **kwargs)
 
     def get_permission_household(self, request):
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         return None if membership is None else membership.household
 
     def post(self, request, pk):
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         if membership is None or membership.role not in (
             Membership.Role.PARENT,
             Membership.Role.CHILD,

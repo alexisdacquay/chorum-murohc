@@ -31,7 +31,12 @@ from chorum_murohc.api.rewards import (
     RewardListView,
     RewardReactivateView,
 )
-from chorum_murohc.api.session import LoginView, LogoutView, SessionView
+from chorum_murohc.api.session import (
+    HouseholdSwitchView,
+    LoginView,
+    LogoutView,
+    SessionView,
+)
 from chorum_murohc.api.submissions import (
     ApprovingParentListView,
     PendingApprovalListView,
@@ -47,6 +52,7 @@ urlpatterns = [
     path('auth/session/', SessionView.as_view(), name='auth-session'),
     path('auth/login/', LoginView.as_view(), name='auth-login'),
     path('auth/logout/', LogoutView.as_view(), name='auth-logout'),
+    path('auth/household/', HouseholdSwitchView.as_view(), name='auth-household'),
     path('auth/pin/', PinView.as_view(), name='auth-pin'),
     path('auth/password/', PasswordChangeView.as_view(), name='auth-password'),
     path('chores/', ChoreListView.as_view(), name='chore-list'),

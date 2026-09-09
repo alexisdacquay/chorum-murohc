@@ -25,11 +25,14 @@ from chorum_murohc.api import serializers as serializers_module
 from chorum_murohc.api import session as session_module
 from chorum_murohc.api import throttling as throttling_module
 from chorum_murohc.api.session import (
+    ACTIVE_HOUSEHOLD_SESSION_KEY,
     LOGIN_FAILED_DETAIL,
     SIGNED_OUT_SESSION,
+    HouseholdSwitchView,
     LoginView,
     LogoutView,
     SessionView,
+    available_households,
     current_session,
     resolve_active_membership,
 )
@@ -39,7 +42,10 @@ from chorum_murohc.identity.models import Household, Membership, User
 SESSION_PATH = '/api/v1/auth/session/'
 LOGIN_PATH = '/api/v1/auth/login/'
 LOGOUT_PATH = '/api/v1/auth/logout/'
+HOUSEHOLD_PATH = '/api/v1/auth/household/'
 HEALTH_PATH = '/api/v1/health/'
+
+NOT_FOUND_BODY = {'detail': 'Not found.'}
 
 SESSION_COOKIE = settings.SESSION_COOKIE_NAME
 CSRF_COOKIE = settings.CSRF_COOKIE_NAME
@@ -212,6 +218,7 @@ def test_auth_urls_are_namespaced_and_resolve_to_their_own_views():
         ('api_v1:auth-session', SESSION_PATH, SessionView),
         ('api_v1:auth-login', LOGIN_PATH, LoginView),
         ('api_v1:auth-logout', LOGOUT_PATH, LogoutView),
+        ('api_v1:auth-household', HOUSEHOLD_PATH, HouseholdSwitchView),
     ):
         assert reverse(name) == path
         assert resolve(path).func.cls is view
@@ -679,6 +686,264 @@ def test_another_households_membership_is_never_borrowed(
     assert household_b.name not in response.content.decode()
 
 
+# Switching between households (issue #130).
+
+
+def household_option(household, role):
+    return {'id': household.pk, 'name': household.name, 'role': role.value}
+
+
+def post_household_switch(api_client, household):
+    return api_client.post(
+        HOUSEHOLD_PATH,
+        {'household_id': household.pk},
+        format='json',
+        headers={'x-csrftoken': bootstrap_csrf(api_client)},
+    )
+
+
+def test_household_list_is_own_live_memberships_sorted_by_name(
+    api_client, household_a, household_b, member
+):
+    Membership.objects.create(
+        household=household_b, user=member, role=Membership.Role.CHILD
+    )
+    Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+    sign_in(api_client, member)
+
+    response = api_client.get(HOUSEHOLD_PATH)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        'households': [
+            household_option(household_a, Membership.Role.PARENT),
+            household_option(household_b, Membership.Role.CHILD),
+        ]
+    }
+
+
+def test_household_list_never_carries_another_users_membership(
+    api_client, household_a, household_b, member
+):
+    other = User.objects.create_user(
+        username='synthetic-other-member',
+        password=SYNTHETIC_OTHER_PASSWORD,
+    )
+    Membership.objects.create(
+        household=household_b, user=other, role=Membership.Role.PARENT
+    )
+    Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.CHILD
+    )
+    sign_in(api_client, member)
+
+    response = api_client.get(HOUSEHOLD_PATH)
+
+    assert response.json() == {
+        'households': [household_option(household_a, Membership.Role.CHILD)]
+    }
+    assert household_b.name not in response.content.decode()
+
+
+def test_household_list_is_empty_with_zero_or_one_membership(
+    api_client, household_a, member
+):
+    sign_in(api_client, member)
+    assert api_client.get(HOUSEHOLD_PATH).json() == {'households': []}
+
+    Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+    assert api_client.get(HOUSEHOLD_PATH).json() == {
+        'households': [household_option(household_a, Membership.Role.PARENT)]
+    }
+
+
+def test_selecting_a_household_switches_the_active_role_and_never_unions(
+    api_client, household_a, household_b, member
+):
+    Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+    Membership.objects.create(
+        household=household_b, user=member, role=Membership.Role.CHILD
+    )
+    sign_in(api_client, member)
+    # Ambiguous until a household is selected.
+    assert api_client.get(SESSION_PATH).json() == authenticated_body(member)
+
+    into_a = post_household_switch(api_client, household_a)
+    assert into_a.status_code == 200
+    assert into_a.json() == authenticated_body(member, household_a, 'parent')
+    assert household_b.name not in into_a.content.decode()
+    assert 'child' not in into_a.content.decode()
+
+    # Remembered for the rest of the session without selecting again.
+    assert api_client.get(SESSION_PATH).json() == authenticated_body(
+        member, household_a, 'parent'
+    )
+
+    into_b = post_household_switch(api_client, household_b)
+    assert into_b.status_code == 200
+    assert into_b.json() == authenticated_body(member, household_b, 'child')
+    assert household_a.name not in into_b.content.decode()
+    assert 'parent' not in into_b.content.decode()
+    assert api_client.get(SESSION_PATH).json() == authenticated_body(
+        member, household_b, 'child'
+    )
+
+
+def test_selecting_ones_own_single_household_is_harmless(
+    api_client, household_a, member
+):
+    Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+    sign_in(api_client, member)
+
+    response = post_household_switch(api_client, household_a)
+
+    assert response.status_code == 200
+    assert response.json() == authenticated_body(member, household_a, 'parent')
+
+
+def test_switching_to_a_household_with_no_live_membership_is_refused_and_reveals_nothing(
+    api_client, household_a, household_b, member
+):
+    Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+    sign_in(api_client, member)
+
+    foreign = post_household_switch(api_client, household_b)
+    missing = api_client.post(
+        HOUSEHOLD_PATH,
+        {'household_id': household_b.pk + 99999},
+        format='json',
+        headers={'x-csrftoken': bootstrap_csrf(api_client)},
+    )
+
+    # A foreign household and one that does not exist answer identically.
+    assert foreign.status_code == missing.status_code == 404
+    assert foreign.json() == missing.json() == NOT_FOUND_BODY
+    assert household_b.name not in foreign.content.decode()
+
+    # The failed switch changes nothing: the caller is still in household_a.
+    assert api_client.get(SESSION_PATH).json() == authenticated_body(
+        member, household_a, 'parent'
+    )
+
+
+def test_switching_household_requires_csrf(
+    api_client, household_a, household_b, member
+):
+    Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+    Membership.objects.create(
+        household=household_b, user=member, role=Membership.Role.CHILD
+    )
+    sign_in(api_client, member)
+
+    response = api_client.post(
+        HOUSEHOLD_PATH, {'household_id': household_a.pk}, format='json'
+    )
+
+    assert response.status_code == 403
+    # Still ambiguous: the CSRF-less attempt never took effect.
+    assert api_client.get(SESSION_PATH).json() == authenticated_body(member)
+
+
+def test_unauthenticated_household_list_and_switch_are_refused(api_client, household_a):
+    listing = api_client.get(HOUSEHOLD_PATH)
+    switch = api_client.post(
+        HOUSEHOLD_PATH,
+        {'household_id': household_a.pk},
+        format='json',
+        headers={'x-csrftoken': bootstrap_csrf(api_client)},
+    )
+
+    for response in (listing, switch):
+        assert response.status_code == 403
+        assert response.json() == NOT_AUTHENTICATED_BODY
+    assert_no_session(api_client)
+
+
+def test_a_selection_stops_working_the_moment_the_membership_is_gone(
+    api_client, household_a, household_b, member
+):
+    # A third household keeps the state genuinely ambiguous once the
+    # selected membership is gone, distinct from
+    # test_a_stale_selection_falls_back_once_only_one_membership_remains
+    # below, where only one live membership is left and the resolver's own
+    # single-membership default legitimately takes over.
+    household_c = Household.objects.create(name='Synthetic Household C')
+    membership_a = Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+    Membership.objects.create(
+        household=household_b, user=member, role=Membership.Role.CHILD
+    )
+    Membership.objects.create(
+        household=household_c, user=member, role=Membership.Role.CHILD
+    )
+    sign_in(api_client, member)
+    post_household_switch(api_client, household_a)
+    assert api_client.get(SESSION_PATH).json()['role'] == 'parent'
+
+    membership_a.delete()
+
+    # No new selection, and no cached authority: the same session sees
+    # nulls, because household_b and household_c are still two unresolved
+    # candidates rather than one the resolver can default to.
+    assert api_client.get(SESSION_PATH).json() == authenticated_body(member)
+
+
+def test_a_stale_selection_falls_back_once_only_one_membership_remains(
+    api_client, household_a, household_b, member
+):
+    membership_a = Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+    Membership.objects.create(
+        household=household_b, user=member, role=Membership.Role.CHILD
+    )
+    sign_in(api_client, member)
+    post_household_switch(api_client, household_a)
+    assert api_client.get(SESSION_PATH).json()['role'] == 'parent'
+
+    membership_a.delete()
+    # household_b is now the only live membership left, so the resolver's
+    # own single-membership default takes over again on the next request,
+    # even though the stale selection still names household_a.
+    assert api_client.get(SESSION_PATH).json() == authenticated_body(
+        member, household_b, 'child'
+    )
+
+
+def test_logging_out_clears_any_household_selection(
+    api_client, household_a, household_b, member
+):
+    Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+    Membership.objects.create(
+        household=household_b, user=member, role=Membership.Role.CHILD
+    )
+    sign_in(api_client, member)
+    post_household_switch(api_client, household_a)
+    assert api_client.get(SESSION_PATH).json()['role'] == 'parent'
+
+    post_logout(api_client)
+    sign_in(api_client, member)
+
+    # A fresh session after logout is ambiguous again, exactly like a first
+    # sign-in: the previous selection did not survive the flush.
+    assert api_client.get(SESSION_PATH).json() == authenticated_body(member)
+
+
 # The resolver on its own.
 
 
@@ -741,6 +1006,76 @@ def test_resolver_fails_closed_for_every_state_that_is_not_one_membership(
     assert resolve_active_membership(member) is None
 
 
+def fake_request(selected_household=None):
+    """A stand-in with a real session, holding at most one selection."""
+    session = SessionStore()
+    if selected_household is not None:
+        session[ACTIVE_HOUSEHOLD_SESSION_KEY] = selected_household.pk
+    return SimpleNamespace(session=session)
+
+
+def test_resolver_honours_a_session_selection_between_two_memberships(
+    household_a, household_b, member
+):
+    Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+    child_membership = Membership.objects.create(
+        household=household_b, user=member, role=Membership.Role.CHILD
+    )
+
+    resolved = resolve_active_membership(member, fake_request(household_b))
+
+    assert resolved == child_membership
+
+
+def test_resolver_ignores_a_selection_with_no_request(household_a, household_b, member):
+    Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+    Membership.objects.create(
+        household=household_b, user=member, role=Membership.Role.CHILD
+    )
+
+    # No request at all behaves exactly like before this feature existed.
+    assert resolve_active_membership(member) is None
+    assert resolve_active_membership(member, None) is None
+
+
+def test_resolver_ignores_a_selection_for_a_household_with_no_live_membership(
+    household_a, household_b, member
+):
+    # A second real membership keeps this distinct from
+    # test_resolver_falls_back_once_a_selection_no_longer_resolves below,
+    # where exactly one live membership remains and legitimately becomes the
+    # default; here two remain, so ignoring the foreign selection must still
+    # deny rather than silently pick one of them.
+    household_c = Household.objects.create(name='Synthetic Household C')
+    Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+    Membership.objects.create(
+        household=household_c, user=member, role=Membership.Role.CHILD
+    )
+
+    # household_b is a real household, but this user has no membership in it.
+    assert resolve_active_membership(member, fake_request(household_b)) is None
+
+
+def test_resolver_falls_back_once_a_selection_no_longer_resolves(
+    household_a, household_b, member
+):
+    # Only one live membership remains; the stored selection names the other
+    # household, which no longer has a row for this user at all.
+    membership = Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+
+    resolved = resolve_active_membership(member, fake_request(household_b))
+
+    assert resolved == membership
+
+
 def test_resolver_fails_closed_without_an_active_authenticated_user(
     household_a, member
 ):
@@ -764,3 +1099,44 @@ def test_current_session_is_the_signed_out_body_without_an_active_user(db):
     assert current_session(User(username='synthetic-unsaved', is_active=False)) == (
         SIGNED_OUT_SESSION
     )
+
+
+# `available_households` on its own.
+
+
+def test_available_households_lists_only_own_live_memberships_sorted_by_name(
+    household_a, household_b, member
+):
+    Membership.objects.create(
+        household=household_b, user=member, role=Membership.Role.CHILD
+    )
+    Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+    other = User.objects.create_user(
+        username='synthetic-other-member',
+        password=SYNTHETIC_OTHER_PASSWORD,
+    )
+    Membership.objects.create(
+        household=household_a, user=other, role=Membership.Role.CHILD
+    )
+
+    assert available_households(member) == [
+        {'id': household_a.pk, 'name': household_a.name, 'role': 'parent'},
+        {'id': household_b.pk, 'name': household_b.name, 'role': 'child'},
+    ]
+
+
+def test_available_households_is_empty_without_an_active_authenticated_user(
+    household_a, member
+):
+    Membership.objects.create(
+        household=household_a, user=member, role=Membership.Role.PARENT
+    )
+
+    assert available_households(None) == []
+    assert available_households(AnonymousUser()) == []
+    assert available_households(User(username='synthetic-unsaved')) == []
+
+    member.is_active = False
+    assert available_households(member) == []

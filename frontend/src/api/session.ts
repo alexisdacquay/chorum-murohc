@@ -1,28 +1,34 @@
 /**
- * The session API client for the merged T027 contract (issue #27).
+ * The session API client for the merged T027 contract (issue #27) and the
+ * household switch it deliberately left out (issue #130).
  *
  * Same-origin Django sessions and CSRF only. There is no JWT, no bearer
  * token, no browser-stored credential, and no cross-origin credential flow,
  * as required by the Session and CSRF Policy in `_docs/design.md`.
  *
- * Three calls, matching the merged endpoints exactly:
+ * Five calls, matching the merged endpoints exactly:
  *
  * - `fetchSession` reads `GET /api/v1/auth/session/`. It is open to everyone,
  *   always answers 200, and delivers the CSRF cookie a browser needs before
  *   it can make an unsafe call.
  * - `login` posts `POST /api/v1/auth/login/` with the CSRF header.
  * - `logout` posts `POST /api/v1/auth/logout/` with the CSRF header.
+ * - `fetchHouseholds` reads `GET /api/v1/auth/household/`: the caller's own
+ *   live memberships, and nothing about any other user or household.
+ * - `selectHousehold` posts `POST /api/v1/auth/household/` with a household
+ *   id and the CSRF header, and returns the same session shape `login` does,
+ *   re-derived from that one membership.
  *
  * Every response crosses a trust boundary, so the body is validated at
  * runtime rather than trusted through a static type, exactly as
  * `api/health.ts` does. A body that does not match the contract is a failed
  * request, not a signed-out viewer.
  *
- * Failures are reduced to four kinds, and no server text ever reaches the
- * interface: the caller maps a kind to its own fixed copy. Nothing here
- * logs, stores, or returns a cookie, a session identifier, a CSRF value, or
- * a password, and only the `csrftoken` cookie is ever read - the session
- * cookie is HttpOnly and is never touched.
+ * Failures are reduced to a small set of kinds, and no server text ever
+ * reaches the interface: the caller maps a kind to its own fixed copy.
+ * Nothing here logs, stores, or returns a cookie, a session identifier, a
+ * CSRF value, or a password, and only the `csrftoken` cookie is ever read -
+ * the session cookie is HttpOnly and is never touched.
  */
 
 import type { SessionSnapshot } from '../navigation/role-router'
@@ -34,6 +40,14 @@ export const CSRF_COOKIE_NAME = 'csrftoken'
 export const CSRF_HEADER_NAME = 'X-CSRFToken'
 
 export const sessionQueryKey = ['session'] as const
+export const householdsQueryKey = ['households'] as const
+
+/** One of the caller's own live memberships, as `GET auth/household/` lists it. */
+export interface HouseholdOption {
+  id: number
+  name: string
+  role: string
+}
 
 /**
  * What went wrong, at the coarsest useful grain.
@@ -43,6 +57,9 @@ export const sessionQueryKey = ['session'] as const
  *   endpoint answers all four identically on purpose.
  * - `throttled`: the login abuse control refused the attempt.
  * - `forbidden`: CSRF or session authority was rejected.
+ * - `not_found`: a household switch named an id that is not one of the
+ *   caller's own live memberships. Identical whether the id belongs to
+ *   someone else's household or does not exist at all.
  * - `unavailable`: unreachable, timed out, not JSON, an unexpected status, or
  *   a body that does not match the contract.
  */
@@ -50,6 +67,7 @@ export type SessionFailure =
   | 'credentials'
   | 'throttled'
   | 'forbidden'
+  | 'not_found'
   | 'unavailable'
 
 /** The one error type these calls reject with. It carries no server text. */
@@ -129,6 +147,29 @@ const readSessionBody = async (response: Response) => {
   }
   return body
 }
+
+/** One `{id, name, role}` triple, and nothing else. */
+const isHouseholdOption = (value: unknown): value is HouseholdOption => {
+  if (!isRecord(value) || Object.keys(value).length !== 3) {
+    return false
+  }
+
+  return (
+    typeof value.id === 'number' &&
+    Number.isInteger(value.id) &&
+    typeof value.name === 'string' &&
+    typeof value.role === 'string'
+  )
+}
+
+/** The exact one-key body `GET auth/household/` returns. */
+const isHouseholdListResponse = (
+  value: unknown,
+): value is { households: HouseholdOption[] } =>
+  isRecord(value) &&
+  Object.keys(value).length === 1 &&
+  Array.isArray(value.households) &&
+  value.households.every(isHouseholdOption)
 
 const send = async (path: string, init: RequestInit) => {
   try {
@@ -259,4 +300,77 @@ export const logout = async ({
   throw new SessionRequestError(
     response.status === 403 ? 'forbidden' : 'unavailable',
   )
+}
+
+/**
+ * `GET /api/v1/auth/household/`: the caller's own live memberships.
+ *
+ * Authenticated only, like `logout`. An empty list is a normal answer for a
+ * single-membership viewer; the caller decides what, if anything, to show.
+ */
+export const fetchHouseholds = async ({
+  signal,
+}: { signal?: AbortSignal } = {}): Promise<HouseholdOption[]> => {
+  const response = await send('/api/v1/auth/household/', {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    signal,
+  })
+
+  if (
+    response.redirected ||
+    response.status !== 200 ||
+    !isJsonMediaType(response.headers.get('Content-Type'))
+  ) {
+    throw new SessionRequestError('unavailable')
+  }
+
+  let body: unknown
+  try {
+    body = await response.json()
+  } catch {
+    throw new SessionRequestError('unavailable')
+  }
+
+  if (!isHouseholdListResponse(body)) {
+    throw new SessionRequestError('unavailable')
+  }
+  return body.households
+}
+
+/**
+ * `POST /api/v1/auth/household/`: switch the active household.
+ *
+ * `householdId` only ever selects a candidate among the caller's own
+ * memberships; the server re-confirms it before honouring it. A 404 means
+ * the id was not one of them, and is indistinguishable from an id that does
+ * not exist at all, so this never confirms or denies a foreign household.
+ */
+export const selectHousehold = async ({
+  csrfToken,
+  householdId,
+  signal,
+}: {
+  csrfToken: string
+  householdId: number
+  signal?: AbortSignal
+}): Promise<SessionSnapshot> => {
+  const response = await send('/api/v1/auth/household/', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      [CSRF_HEADER_NAME]: csrfToken,
+    },
+    body: JSON.stringify({ household_id: householdId }),
+    signal,
+  })
+
+  if (response.status === 404) {
+    throw new SessionRequestError('not_found')
+  }
+  if (response.status === 403) {
+    throw new SessionRequestError('forbidden')
+  }
+  return readSessionBody(response)
 }

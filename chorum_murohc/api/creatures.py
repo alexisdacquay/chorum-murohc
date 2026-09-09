@@ -112,12 +112,12 @@ class _CreatureAPIView(APIView):
 
     def get_permission_household(self, request):
         """The one household the caller may read or act in, or `None`."""
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         return None if membership is None else membership.household
 
     def require_child_membership(self):
         """Re-resolve the acting child, for use inside a write."""
-        membership = resolve_active_membership(self.request.user)
+        membership = resolve_active_membership(self.request.user, self.request)
         if membership is None or membership.role != Membership.Role.CHILD:
             raise PermissionDenied(PERMISSION_DENIED_DETAIL)
         return membership

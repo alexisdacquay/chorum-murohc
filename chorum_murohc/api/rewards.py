@@ -143,7 +143,7 @@ class _RewardAPIView(APIView):
         super().initial(request, *args, **kwargs)
 
     def get_permission_household(self, request):
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         return None if membership is None else membership.household
 
     def get_queryset(self):
@@ -153,7 +153,7 @@ class _RewardAPIView(APIView):
         return Reward.objects.filter(household=household)
 
     def require_parent_membership(self):
-        membership = resolve_active_membership(self.request.user)
+        membership = resolve_active_membership(self.request.user, self.request)
         if membership is None or membership.role != Membership.Role.PARENT:
             raise PermissionDenied(PERMISSION_DENIED_DETAIL)
         return membership
@@ -191,7 +191,7 @@ class RewardListView(_RewardAPIView):
         return [IsHouseholdParentOrChild()]
 
     def get(self, request):
-        membership = resolve_active_membership(request.user)
+        membership = resolve_active_membership(request.user, request)
         is_parent = membership is not None and membership.role == Membership.Role.PARENT
         rewards = self.get_queryset()
 
