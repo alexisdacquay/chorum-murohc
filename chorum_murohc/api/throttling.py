@@ -13,13 +13,16 @@ calls `record_failure` on its failure path alone.
 
 The rates live in `config/settings.py` under `DEFAULT_THROTTLE_RATES`, and
 the counters live in their own named cache so that clearing an application
-cache cannot reset the control.
+cache cannot reset the control. That cache is database-backed
+(`CACHES['login_throttle']` in `config/settings.py`), so every application
+process reads and writes the same counters; a local-memory cache would let
+each process count its own, and a second worker would then multiply the
+allowance (issue 128).
 
 Both scopes key on the client address and never on the submitted username.
 Keying on a name would let an attacker lock out a named account, and the
 different behaviour of a known and an unknown name would leak which accounts
-exist. The counters are per process; a multi-process deployment needs the
-shared backend tracked in issue 128.
+exist.
 """
 
 from django.core.cache import caches

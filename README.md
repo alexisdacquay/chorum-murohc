@@ -338,10 +338,13 @@ credentials are derived and rotated inside the job.
 Said plainly, because the alternative is finding out later:
 
 - **One process.** The application is a threaded standard-library WSGI
-  server, sized for a family on one machine. The login abuse control counts
-  attempts per process, so a second worker would multiply the allowance
-  ([#128](https://github.com/alexisdacquay/chorum-murohc/issues/128)): run
-  one.
+  server, sized for a family on one machine, and nothing here starts more
+  than one worker today. That is a sizing choice rather than a forced one:
+  the login abuse control used to be a reason it could not change, since it
+  counted attempts in local memory and a second worker would have multiplied
+  the allowance, but its counters now live in PostgreSQL and are shared
+  across any number of processes
+  ([#128](https://github.com/alexisdacquay/chorum-murohc/issues/128)).
 - **No TLS of its own.** Certificates belong to a reverse proxy in front of
   it. See `DJANGO_HTTPS` above.
 - **The Content-Security-Policy does not reach the interface document.**

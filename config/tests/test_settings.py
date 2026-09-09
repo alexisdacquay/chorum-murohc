@@ -907,13 +907,14 @@ def test_session_lasts_fourteen_days_without_idle_extension():
     assert result['session_expire_at_browser_close'] is False
 
 
-def test_login_throttle_has_its_own_named_cache():
+def test_login_throttle_has_its_own_named_database_backed_cache():
+    """Database-backed (issue 128) so every process shares one counter."""
     result = settings_probe()
 
     assert result['cache_aliases'] == ['default', 'login_throttle']
     assert result['login_throttle_cache'] == {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'login-throttle',
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'login_throttle_cache',
     }
 
 

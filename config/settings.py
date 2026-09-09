@@ -366,17 +366,20 @@ SILENCED_SYSTEM_CHECKS = ['security.W021']
 # https://docs.djangoproject.com/en/5.2/topics/cache/
 #
 # The login throttle keeps its counters in a cache of its own, so clearing an
-# application cache can never reset the abuse control. Local memory means the
-# counters are per process; the shared backend a multi-process deployment
-# needs is tracked in issue 128.
+# application cache can never reset the abuse control. It is database-backed
+# rather than local memory so that every application process shares one set
+# of counters instead of each counting its own (issue 128); PostgreSQL is
+# already the one dependency this needs. The table is created by the
+# `chorum_murohc` migration `0001_login_throttle_cache_table`, so it exists
+# before anything tries to use it.
 
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     },
     'login_throttle': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'login-throttle',
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'login_throttle_cache',
     },
 }
 
