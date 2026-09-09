@@ -96,6 +96,7 @@ INSTALLED_APPS = [
     'chorum_murohc.rewards.apps.RewardsConfig',
     'chorum_murohc.progression.apps.ProgressionConfig',
     'chorum_murohc.creatures.apps.CreaturesConfig',
+    'chorum_murohc.interest.apps.InterestConfig',
 ]
 
 AUTH_USER_MODEL = 'identity.User'

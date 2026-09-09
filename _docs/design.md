@@ -86,6 +86,7 @@ packages.
 | `chorum_murohc.rewards` | Reward-redemption records | T056 and later reward-schema changes |
 | `chorum_murohc.progression` | Per-child level state | T062 and later progression-schema changes |
 | `chorum_murohc.creatures` | Creature catalogue, forms, and selection state | T069 and later creature-schema changes |
+| `chorum_murohc.interest` | Weekly interest accrual policy and command; no product models of its own | T052 and later interest-accrual changes |
 
 Python dependencies between product apps must follow this acyclic direction
 map:
@@ -93,7 +94,7 @@ map:
 | Importing package | Product packages it may import |
 | --- | --- |
 | `chorum_murohc` root | None |
-| `chorum_murohc.api` | Every product package: `identity`, `audit`, `chores`, `submissions`, `ledger`, `rewards`, `progression`, `creatures` |
+| `chorum_murohc.api` | Every product package: `identity`, `audit`, `chores`, `submissions`, `ledger`, `rewards`, `progression`, `creatures`, `interest` |
 | `chorum_murohc.audit` | None |
 | `chorum_murohc.identity` | `audit` |
 | `chorum_murohc.chores` | `audit` |
@@ -102,6 +103,7 @@ map:
 | `chorum_murohc.rewards` | `identity`, `ledger`, `audit` |
 | `chorum_murohc.progression` | `identity`, `ledger`, `audit` |
 | `chorum_murohc.creatures` | `identity`, `progression`, `audit` |
+| `chorum_murohc.interest` | `identity`, `ledger`, `audit` |
 
 `chorum_murohc.api` is the top layer and no product package may import it.
 It was promoted out of the root boundary so that one household-role permission
