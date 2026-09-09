@@ -1,0 +1,69 @@
+# The whole household on one machine: PostgreSQL, and the application with
+# the built interface served from the same origin as the API.
+#
+#     docker compose up -d --build
+#     docker compose run --rm app python manage.py bootstrap_household
+#
+# Then open http://localhost:8000/. README.md has the rest, including what
+# to change before the children's devices can reach it.
+
+name: chorum-murohc
+
+services:
+  database:
+    image: postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    environment:
+      POSTGRES_DB: chorum_murohc
+      POSTGRES_USER: chorum_murohc
+      # The database publishes no port: the application container on this
+      # private network is the only thing that can reach it. Set
+      # CHORUM_DB_PASSWORD in your shell before the first start if you would
+      # rather choose your own; changing it later needs an ALTER ROLE too.
+      POSTGRES_PASSWORD: ${CHORUM_DB_PASSWORD:-chorum-murohc-local}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chorum_murohc -d chorum_murohc"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  app:
+    build: .
+    image: chorum-murohc:local
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      DJANGO_ENVIRONMENT: production
+      # Generated into the state volume on the first start, and read from
+      # there by the settings module, so every process in the container signs
+      # with the same key. Set DJANGO_SECRET_KEY instead to hold your own.
+      DJANGO_SECRET_KEY_FILE: /var/lib/chorum/secret_key
+      # Every name the family will type, comma separated. Add the machine's
+      # own address here before the children's devices can reach it:
+      # CHORUM_HOSTS=localhost,127.0.0.1,192.168.1.20 docker compose up -d
+      DJANGO_ALLOWED_HOSTS: ${CHORUM_HOSTS:-localhost,127.0.0.1}
+      # Plain HTTP on your own network. Secure cookies are never sent over
+      # HTTP, so nobody could sign in with this true and no certificate.
+      # Turn it on the day a TLS proxy sits in front: CHORUM_HTTPS=true.
+      DJANGO_HTTPS: ${CHORUM_HTTPS:-false}
+      DJANGO_DB_ENGINE: postgresql
+      DJANGO_DB_NAME: chorum_murohc
+      DJANGO_DB_USER: chorum_murohc
+      DJANGO_DB_PASSWORD: ${CHORUM_DB_PASSWORD:-chorum-murohc-local}
+      DJANGO_DB_HOST: database
+      DJANGO_DB_PORT: "5432"
+    volumes:
+      # The signing key for sessions, generated on the first start.
+      - state:/var/lib/chorum
+    ports:
+      # Reachable from this machine only. To let the household in, publish it
+      # on the network instead: CHORUM_BIND=0.0.0.0 docker compose up -d
+      - "${CHORUM_BIND:-127.0.0.1}:${CHORUM_PORT:-8000}:8000"
+    restart: unless-stopped
+
+volumes:
+  database:
+  state:

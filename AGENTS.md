@@ -9,7 +9,10 @@ and buy rewards and creature progression.
 - `chorum_murohc/` - Django. One package per domain: `identity`, `chores`,
   `submissions`, `ledger`, `rewards`, `progression`, `creatures`, `audit`.
   `chorum_murohc/api/` is the only HTTP layer; no domain package imports it.
-- `config/` - Django settings. `frontend/` - React, TypeScript, Vite, Tailwind.
+- `config/` - Django settings, URLs, and `spa.py`, the one-origin WSGI
+  composition the container serves. `frontend/` - React, TypeScript, Vite,
+  Tailwind. `Dockerfile`, `compose.yaml`, `docker/` - how it runs; `README.md`
+  is the runbook.
 - `_docs/` - `plan.md` scope, `design.md` architecture, `tasks.md` backlog,
   `design-system.md` UI, `testing-guidelines.md` tests, `roadmap.md` deferred,
   and the approval, retention and dependency product policies.

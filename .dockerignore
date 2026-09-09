@@ -1,0 +1,13 @@
+# Everything the image builds for itself, and everything it must never carry.
+.git
+.github
+.ruff_cache
+_docs
+browser_journeys
+frontend/node_modules
+frontend/dist
+staticfiles
+**/__pycache__
+**/*.pyc
+.venv
+db.sqlite3

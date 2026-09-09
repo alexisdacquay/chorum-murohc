@@ -1,139 +1,255 @@
 # Chorum-murohc
 
-Chorum-murohc is a planned household chore-management web app that turns everyday
-tasks into a rewarding experience for individuals, couples, and families.
+A household chores-and-rewards web app for two parents and their children.
+Children submit the chores they have done, a parent approves each one with a
+PIN, and the points land in a ledger that buys rewards and grows a creature.
 
-Children complete chores to earn points, parents approve the work, and saved
-points help creatures evolve over time. Points can also be exchanged for
-agreed household rewards.
+It runs on one small machine - a home server, a spare laptop, a cheap VPS -
+from one `docker compose` command. It is built for one household on its own
+network, not for the internet.
 
-> **Project status:** Early development. The Django project and initial
-> `chorum-murohc` app and the minimal React frontend foundation have been created;
-> product features are not yet implemented.
+## What it does today
 
-## Planned features
+Everything below is implemented, tested, and driven end to end in a real
+browser by the journeys in `browser_journeys/`.
 
-- Parent-managed household accounts and roles
-- A reusable pool of chores with configurable point values
-- Parent approval of completed chores using a PIN
-- Points for saving, spending, and creature progression
-- Creature evolution with a visual history of earlier forms
-- Household administration for users, chores, approvals, and balances
+- **Accounts.** A parent creates every account in the household, parent or
+  child, and can rename, deactivate, reactivate or delete one. The household
+  always keeps at least one active parent.
+- **Chore pool.** Parents keep a pool of chores, each with a fixed point
+  value. Every chore is always available to every child; nothing is
+  scheduled and nothing disappears when it is claimed.
+- **Submission and approval.** A child marks a chore done and submits it. A
+  parent approves or rejects it with their four-to-ten-digit PIN, either on
+  the child's device or from their own queue on their own device. Five wrong
+  PINs lock that parent out for fifteen minutes.
+- **Points.** An approved chore credits the child's ledger. The ledger is
+  append-only: entries are never edited or deleted, and every credit and
+  debit carries an idempotency key, so a retry cannot pay twice.
+- **Interest.** Unspent points earn 2 percent once a week, floored to whole
+  points and capped at 20 points per accrual. `manage.py accrue_interest` is
+  the only thing that credits it, and it always takes an explicit date.
+- **Rewards.** Parents define the reward catalogue themselves - what it is
+  called, what it costs. A child redeems from it when the balance covers it;
+  a parent fulfils or cancels the request, and the ledger shows the exact
+  effect.
+- **Levels.** Ten levels, from lifetime points earned: 50, 150, 300, 500,
+  750, 1050, 1400, 1800, 2250, 2750. Spending never demotes anyone.
+- **Creatures.** Seven original creature lines with four forms each. A child
+  picks a line once, at first sign-in, and keeps it. Forms are revealed at
+  levels 1, 4, 7 and 10; the ones still to come show as silhouettes with the
+  level that reveals them.
+- **Oversight.** Parents see every child's balance and level on one overview
+  screen, and the household's activity history on another.
 
-## Intended technology
+Parent screens: Overview, Approvals, Chore pool, Reward requests, Household,
+Activity, Approval PIN. Child screens: Chores, Points, Rewards, Levels,
+Creature.
 
-- Python and Django REST Framework for the backend API
-- React and TypeScript for the frontend
-- PostgreSQL for persistent data
-- Tailwind CSS and shadcn/ui for the interface
-- [uv](https://docs.astral.sh/uv/) and pnpm for dependency management
+## Run it
 
-## Documentation
+You need Docker Engine with the Compose plugin. Nothing else: Python, Node
+and the database all live inside the containers.
 
-- [Contributor map](AGENTS.md) - layout, the two gates, and the house rules
-- [Project plan](_docs/plan.md) - current product scope and requirements
-- [Design](_docs/design.md) - selected architecture and implementation track
-- [Backlog](_docs/tasks.md) - self-contained implementation tasks
-- [Testing guidelines](_docs/testing-guidelines.md) - what to test and at which layer
-- [Design system](_docs/design-system.md) - interface tokens and component rules
-- [Dependency approvals](_docs/dependency-approvals.md) - package-change register
-- [Approval authentication](_docs/approval-authentication.md) - parent PIN policy
-- [Retention policy](_docs/retention-policy.md) - deactivate, edit and delete rules
-- [Roadmap](_docs/roadmap.md) - ideas intentionally deferred beyond the current scope
-- [Browser journeys](browser_journeys/README.md) - the end-to-end harness and how to run it
-- [Accessibility audit](_docs/audit-accessibility.md) - WCAG 2.2 AA findings for the current scope
-- [Security audit](_docs/audit-security.md) - security findings and the residual-risk recheck
-- [Plan verification](_docs/plan-verification.md) - requirement-by-requirement go or no-go
+```shell
+git clone https://github.com/alexisdacquay/chorum-murohc.git
+cd chorum-murohc
+docker compose up -d --build
+```
 
-## Local development
+That builds the interface and the application image, starts PostgreSQL with a
+volume of its own, generates a session signing key into a second volume,
+applies the migrations, and serves the whole thing on
+<http://localhost:8000/>. Both containers restart with the machine.
+
+### Create the first parent
+
+The database starts empty, so nobody can sign in yet. This command asks for
+the household name, the first parent's username, and a password twice. It
+takes no default password and prints nothing back.
+
+```shell
+docker compose run --rm app python manage.py bootstrap_household
+```
+
+```
+Household name: Ridgeway House
+Parent username: alexis
+Password:
+Confirm password:
+Bootstrap completed.
+```
+
+The password must satisfy Django's own validators: at least eight
+characters, not entirely numeric, not a common password, and not too close
+to the username.
+
+Running it again is safe. With the same answers it changes nothing and says
+`Bootstrap already completed; no changes made.` With different answers, once
+the household exists, it refuses with `Bootstrap could not be completed.` and
+writes nothing.
+
+### Add a child
+
+Open <http://localhost:8000/>, sign in as the parent you just created, and
+go to **Household**:
+
+1. **Add member**, then a username, a password, and the role **Child**.
+2. Give the child that username and password. They sign in on their own
+   device, at the same address, and pick their creature line the first time.
+
+The same screen adds the second parent. Every account in the household is
+created here.
+
+### Set your approval PIN
+
+Approving a chore needs a PIN, not just a session, so each parent sets their
+own on the **Approval PIN** screen: four to ten digits, confirmed with the
+account password. Until a parent has one, they cannot approve anything.
+
+### Let the rest of the household in
+
+Out of the box the application answers on `127.0.0.1` only, so nothing but
+this machine can reach it. To let the family's devices in, publish it on the
+network and tell Django the address they will type:
+
+```shell
+CHORUM_BIND=0.0.0.0 CHORUM_HOSTS=localhost,127.0.0.1,192.168.1.20 docker compose up -d
+```
+
+That is plain HTTP on your own network, which is what a household on its own
+LAN should expect. Do not put it on the public internet like this. If you
+want it reachable from outside the house, terminate TLS in a reverse proxy in
+front of it and start it with `CHORUM_HTTPS=true`, which turns on Secure
+cookies, the redirect to HTTPS, and HSTS together.
+
+### Accrue the weekly interest
+
+Interest is not a background thread; one command applies it, and it is safe
+to run twice for the same date. Run it once a week from the host's cron,
+shortly after the Sunday 00:00 UTC week boundary:
+
+```
+5 0 * * 0 cd /path/to/chorum-murohc && docker compose exec -T app \
+  python manage.py accrue_interest --date "$(date -u -d yesterday +\%Y-\%m-\%d)"
+```
+
+`_docs/interest-schedule.md` has the rest: dry runs, one household at a time,
+a missed week, and how to turn it off.
+
+### Everyday operations
+
+```shell
+docker compose logs -f app                 # what the server is doing
+docker compose ps                          # both containers and their health
+docker compose stop                        # stop the household
+docker compose up -d                       # start it again
+git pull && docker compose up -d --build   # update to a newer version
+docker compose exec app python manage.py changepassword alexis
+```
+
+There is no self-service password reset: a forgotten password is reset with
+`changepassword` by whoever runs the machine.
+
+## Backup and restore
+
+The points and the history are the only things in here that cannot be made
+again, and they all live in PostgreSQL. One command dumps everything:
+
+```shell
+docker compose exec -T database pg_dump --clean --if-exists -U chorum_murohc chorum_murohc > chorum-backup.sql
+```
+
+One command puts it back. Stop the application first so nothing is writing
+while the tables are replaced; the dump drops and recreates each one, so
+restoring over a running household is safe to repeat:
+
+```shell
+docker compose stop app
+docker compose exec -T database psql -U chorum_murohc -d chorum_murohc < chorum-backup.sql
+docker compose start app
+```
+
+Keep the dump somewhere off this machine. It contains password and PIN
+hashes, so treat it like the household's keys.
+
+The `state` volume holds one more thing worth keeping: the generated session
+signing key. Losing it costs everyone their signed-in session and nothing
+else - they sign in again.
+
+## Configuration
+
+Settings are read from the process environment. Django does not load `.env`
+files in this project. The compose file sets everything the container needs;
+these are the ones worth changing, and each has a `CHORUM_*` shortcut you can
+put in front of `docker compose up -d`.
+
+| Shortcut | Sets | Default | What it is for |
+| --- | --- | --- | --- |
+| `CHORUM_BIND` | the published address | `127.0.0.1` | `0.0.0.0` to let the household's devices reach it |
+| `CHORUM_PORT` | the published port | `8000` | another port on the host |
+| `CHORUM_HOSTS` | `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` | every name or address the family will type, comma separated |
+| `CHORUM_HTTPS` | `DJANGO_HTTPS` | `false` | `true` when a TLS proxy sits in front |
+| `CHORUM_DB_PASSWORD` | the database password | a fixed local value | set it before the first start if you want your own |
+
+The database publishes no port at all: the application container on the
+compose network is the only thing that can reach it.
+
+The full set of variables the settings module reads, for anyone deploying it
+some other way:
+
+| Variable | Accepted format | Development default | Production requirement |
+| --- | --- | --- | --- |
+| `DJANGO_ENVIRONMENT` | `development` or `production`; whitespace and case are normalised | `development` | Set to `production`; empty or unknown is rejected |
+| `DJANGO_SECRET_KEY` | Any non-blank value, used exactly as supplied | `django-insecure-local-development-only` | Required, unless `DJANGO_SECRET_KEY_FILE` supplies it |
+| `DJANGO_SECRET_KEY_FILE` | Path to a file holding the key; surrounding whitespace is stripped. `DJANGO_SECRET_KEY` wins if both are set | unset | How the container does it: the entrypoint generates the file into the state volume on the first start |
+| `DJANGO_DEBUG` | True: `1`, `true`, `yes`, `on`; false: `0`, `false`, `no`, `off` | `True` | Defaults to `False`; a true value is always rejected |
+| `DJANGO_HTTPS` | Same true and false values as `DJANGO_DEBUG` | `False` | Defaults to `True`. Secure cookies, the HTTPS redirect and HSTS, all together |
+| `DJANGO_ALLOWED_HOSTS` | Comma-separated hosts; empty entries and `*` are rejected | `localhost`, `127.0.0.1`, `[::1]`, `testserver` | At least one non-wildcard host |
+| `DJANGO_DB_ENGINE` | `sqlite` or `postgresql` | `sqlite` | Must be `postgresql` |
+| `DJANGO_DB_NAME` | SQLite: `:memory:`, an absolute path, or a path under the project root. PostgreSQL: the database name | `<project-root>/db.sqlite3` | Required |
+| `DJANGO_DB_USER`, `DJANGO_DB_PASSWORD`, `DJANGO_DB_HOST`, `DJANGO_DB_PORT` | Any non-blank value; the port is 1 to 65535 | Must be absent with SQLite | All four required |
+| `DJANGO_DB_TARGET` | The isolated-test grammar below | Only when development selects PostgreSQL | Forbidden |
+
+Supplying a PostgreSQL-only variable while SQLite is selected is an error
+rather than being silently ignored.
+
+### What `DJANGO_HTTPS=false` costs
+
+A Secure cookie is never sent over plain HTTP, so a household reached at
+`http://192.168.1.20:8000` must have this off or nobody could sign in. It is
+a real downgrade and the deployment check says so: with it off,
+`manage.py check --deploy` reports W004, W008, W012 and W016 - no HSTS, no
+redirect to HTTPS, and neither cookie marked Secure. On a home network,
+behind the house's own router, that is the honest trade. With
+`CHORUM_HTTPS=true` and a proxy holding the certificate, the same check has
+nothing to report but the one W021 this project silences on purpose.
+
+## Development
+
+### What runs where
+
+- `chorum_murohc/` - Django. One package per domain: `identity`, `chores`,
+  `submissions`, `ledger`, `rewards`, `progression`, `creatures`, `interest`,
+  `audit`. `chorum_murohc/api/` is the only HTTP layer.
+- `config/` - settings, URLs, and `config/spa.py`, which serves the API, the
+  admin and the built interface from one origin. Session cookies and CSRF
+  only work when they share one.
+- `frontend/` - React, TypeScript, Vite, Tailwind.
+- `docker/`, `Dockerfile`, `compose.yaml` - how it runs.
+- `_docs/` - the plan, the design, the backlog and the product policies.
+
+The public name has a hyphen; Python packages cannot, so the importable
+package is `chorum_murohc`.
 
 ### Prerequisites
 
-- Python 3.13 or later
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- Node.js 24.15.0
-- pnpm 11.19.0
+Python 3.13 or later, [uv](https://docs.astral.sh/uv/), Node.js 24.15.0 and
+pnpm 11.19.0.
 
-### Default SQLite setup
+### The two gates
 
-With no database variables set, install the locked dependencies and prepare the
-default local SQLite database:
-
-```shell
-uv sync --locked
-uv run --locked python manage.py migrate
-```
-
-Start the development server:
-
-```shell
-uv run --locked python manage.py runserver
-```
-
-Then open <http://127.0.0.1:8000/>.
-
-### Frontend
-
-Install the exact dependencies recorded in the frontend lockfile:
-
-```shell
-pnpm --dir frontend install --frozen-lockfile
-```
-
-Start the Vite development server:
-
-```shell
-pnpm --dir frontend dev
-```
-
-Then open <http://localhost:5173/>.
-
-Run the component tests and create a type-checked production build:
-
-```shell
-pnpm --dir frontend test
-pnpm --dir frontend build
-```
-
-### Checks and tests
-
-```shell
-uv run --locked python manage.py check
-uv run --locked ruff format --check .
-uv run --locked ruff check .
-uv run --locked pytest
-```
-
-### Browser journeys
-
-The critical household journeys are driven in headless Chrome against the real
-API and the real build, on one origin. They need a frontend build and a
-browser, so they are a local gate rather than a CI check:
-
-```shell
-pnpm --dir frontend build
-python3 -m browser_journeys.run_journeys .
-```
-
-See [browser_journeys/README.md](browser_journeys/README.md) for the journey
-list, the isolation contract, and why this is not a CI job.
-
-### Continuous integration and local parity
-
-The `CI` workflow reports two stable required checks: `Backend` and `Frontend`.
-Both run for every pull request targeting `main` and every push to `main`. A
-failed immutable install, check, test, build, database preflight, or guarded
-cleanup leaves its check failed.
-
-The backend check uses PostgreSQL, so a default SQLite run is useful locally but
-is **not** CI parity. For backend parity, first follow the approved fresh-container
-boundary under [Isolated PostgreSQL tests](#isolated-postgresql-tests): use a new
-container from the exact approved PostgreSQL 17.11 image, bind its selected port
-only to `127.0.0.1`, generate a unique `task_tNNN_<worker-token>` target, and
-inject separate test-only bootstrap and restricted-role values through the
-process environment. Do not put either value in a command argument or a file.
-After the preflight proves the exact target, derived names, owner, role flags,
-empty base schema, and absent test database, run the same commands as `Backend`:
+Both green, or no merge. CI reports them as `Backend` and `Frontend`.
 
 ```shell
 uv sync --locked
@@ -144,185 +260,124 @@ uv run --locked python manage.py makemigrations --check --dry-run
 uv run --locked pytest
 ```
 
-On ordinary completion, prove that Django removed the exact derived test
-database and left the base `public` schema empty. Then stop and remove only the
-recorded run-labelled container. CI makes the same checks and uses an
-`always()` cleanup step to remove only its exact run-derived test database, base
-database, and restricted role after a later failure. Abrupt cancellation is
-contained by GitHub's transient job-container teardown.
-
-CI initialises the service through the fixed, non-secret password-file path
-`/proc/sys/kernel/random/boot_id`; Runner service metadata may show that path,
-but not its content. At the start of PostgreSQL prepare, the helper validates
-the path content and exact Runner identity, masks the content, derives and masks
-separate domain-labelled SHA-256 values, then transfers only the two derived
-values. It connects once with the in-memory initial value, verifies the server,
-and immediately rotates the bootstrap role before creating the restricted
-role. Django receives only the restricted value, while guarded cleanup receives
-only the rotated bootstrap value. The initial content never crosses a step
-boundary, and none of the three values is written to documentation or logs.
-
-The local commands matching `Frontend` are:
-
 ```shell
 pnpm --dir frontend install --frozen-lockfile
 pnpm --dir frontend test
 pnpm --dir frontend build
 ```
 
-CI disables uv caching and pnpm store, runtime, dependency-tree, test, and build
-caching. The pinned pnpm setup action still maintains its unavoidable,
-content-keyed lockfile-verification memo; that memo is an untrusted optimisation
-and never replaces the explicit frozen install above.
+With no database variables set, the backend gate uses a local SQLite file and
+needs no service. That is convenient, not CI parity; CI runs the same
+commands against PostgreSQL. A third workflow, `Dependency audit`, scans both
+lockfiles for known vulnerabilities every Monday and on every pull request.
 
-## Project structure
-
-- `config/` - project-wide Django settings and URL routing
-- `chorum_murohc/` - the main Chorum-murohc Django app
-- `frontend/` - React and TypeScript browser application
-- `_docs/plan.md` - current product plan and requirements
-- `manage.py` - command-line entry point for Django tasks
-
-The public project and app name uses a hyphen. Python package names cannot use
-hyphens, so the app's importable code folder uses `chorum_murohc` instead.
-
-## Configuration and security
-
-Settings are read from the process environment. Django does not load `.env`
-files in this project, so a shell, process manager, container platform, or
-deployment service must inject production values at runtime. Do not commit,
-print, or pass real credentials in commands.
-
-With none of the variables below set, the application starts in development
-mode with safe local defaults. Variable names, formats, and production rules
-are:
-
-| Variable | Accepted format | Development default | Production requirement |
-| --- | --- | --- | --- |
-| `DJANGO_ENVIRONMENT` | `development` or `production`; surrounding whitespace and case are normalised | `development` | Set to `production`; an empty or unknown value is rejected |
-| `DJANGO_SECRET_KEY` | Any non-blank value, used exactly as supplied | `django-insecure-local-development-only` | A non-blank runtime secret is required |
-| `DJANGO_DEBUG` | True: `1`, `true`, `yes`, `on`; false: `0`, `false`, `no`, `off`; case-insensitive with surrounding whitespace ignored | `True` | Defaults to `False`; a true value is always rejected |
-| `DJANGO_ALLOWED_HOSTS` | Comma-separated hosts; whitespace around each host is removed, order is preserved, and empty entries or `*` are rejected | `localhost`, `127.0.0.1`, `[::1]`, `testserver` | At least one non-wildcard host is required |
-| `DJANGO_DB_ENGINE` | `sqlite` or `postgresql`; surrounding whitespace and case are normalised | `sqlite` | Must be explicitly set to `postgresql` |
-| `DJANGO_DB_TARGET` | Local: `task_tNNN_<worker-token>`. CI: `ci_<run-id>_<attempt>_<job-token>`. Exact grammar is below | Required only when development selects PostgreSQL; forbidden with SQLite | Forbidden; production has no explicit test target |
-| `DJANGO_DB_NAME` | For SQLite: `:memory:`, an absolute path, or a relative path beneath the project root. For guarded PostgreSQL development: exactly `chorum_murohc_<DJANGO_DB_TARGET>` | `<project-root>/db.sqlite3` with SQLite | Any non-blank PostgreSQL database name is required |
-| `DJANGO_DB_USER` | For guarded PostgreSQL development: exactly `chorum_murohc_<DJANGO_DB_TARGET>` | Must be absent with SQLite | Any non-blank PostgreSQL role is required |
-| `DJANGO_DB_PASSWORD` | Any non-blank value | Must be absent with SQLite | Required with PostgreSQL and injected as a secret |
-| `DJANGO_DB_HOST` | Guarded task target: exactly `127.0.0.1`; guarded CI target: exactly `postgres` | Must be absent with SQLite | Any non-blank PostgreSQL host is required |
-| `DJANGO_DB_PORT` | With PostgreSQL, ASCII decimal digits representing `1` through `65535`; leading zeroes are removed | Must be absent with SQLite | Required with PostgreSQL |
-
-An explicitly blank SQLite database name is invalid. Supplying any
-PostgreSQL-only user, password, host, port, or target variable while SQLite is
-selected is also invalid instead of being silently ignored. Production remains
-a separately supplied PostgreSQL configuration: `DJANGO_DB_TARGET` is forbidden
-there and Django receives no explicit task or CI test-database name.
-
-For local development, the fixed fallback values need no configuration. A
-production platform should inject values such as
-`DJANGO_SECRET_KEY=<inject-a-secret-at-runtime>` and
-`DJANGO_DB_PASSWORD=<inject-a-password-at-runtime>` through its secret store;
-the placeholders are not usable credentials.
-
-## Isolated PostgreSQL tests
-
-PostgreSQL development and test runs fail closed around one explicitly named
-worktree or CI target. The parser does not trim or normalise a target: every
-character must match one of these ASCII grammars exactly.
-
-| Lineage | Exact target grammar | Boundaries | Required host |
-| --- | --- | --- | --- |
-| Local task | `task_tNNN_<worker-token>` | `NNN` is exactly three ASCII digits; the token is 8-16 lowercase ASCII letters or digits | `127.0.0.1` |
-| CI job | `ci_<run-id>_<attempt>_<job-token>` | Run ID is 1-20 ASCII digits; attempt is 1-3 ASCII digits; token is 8-16 lowercase ASCII letters or digits | `postgres` |
-
-Whitespace, uppercase, Unicode, punctuation other than the fixed underscores,
-missing uniqueness tokens, unknown prefixes, and oversized values are rejected.
-Operational uniqueness is established by generating a new token for every
-worktree, run, job, or shard and proving the derived test database is absent
-before use.
-
-For a target named `<target>`, the connection fields are derived rather than
-chosen independently:
-
-- base database and restricted role: `chorum_murohc_<target>`;
-- disposable test database: `test_chorum_murohc_<target>`; and
-- password: a generated test-only secret injected at runtime, never printed or
-  placed in a command argument.
-
-The longest permitted CI target is 44 ASCII bytes. Its base and role name are
-58 bytes, and its test database is exactly PostgreSQL's 63-byte identifier
-limit. There is no independent variable for the test-database name.
-
-### Approved local verification boundary
-
-T005 Engineer, QA, and post-merge verification may each use one fresh local
-container from the official immutable image
-`postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73`.
-The approval is limited to the local Docker `orbstack` context, an exact
-run-labelled container, a Docker-selected port bound only to `127.0.0.1`,
-transient storage, synthetic empty-scaffold data, and no repository or secret
-mounts. The recorded approval is in
-[issue #5](https://github.com/alexisdacquay/chorum-murohc/issues/5#issuecomment-5559116428).
-
-The Django role must own the derived base database and have exactly these
-relevant flags: `NOSUPERUSER CREATEDB NOCREATEROLE NOREPLICATION`. It may
-connect to the isolated cluster's built-in `postgres` database so Django can
-create and destroy the test database. Bootstrap authority and its generated
-credential are never supplied to Django.
-
-Before giving Django access, record and verify only this non-secret evidence:
-
-- target, derived base database, derived test database, and derived role;
-- allowed host and Docker-selected loopback port;
-- exact container name, run label, immutable image digest, and PostgreSQL
-  server version;
-- base-database owner and the four restricted-role flags;
-- the exact base database exists, its `public` schema has no application
-  tables, and the derived test database does not exist.
-
-The preflight guard must reject an unexpected host, name, image, label, owner,
-role flag, existing test database, or non-empty base schema before Django
-receives a credential. A negative preflight check uses a deliberately invalid
-non-secret host, name, or role expectation and confirms that the guard stops
-without creating or dropping anything.
-
-Inject the six `DJANGO_DB_*` connection fields plus `DJANGO_DB_TARGET` into the
-test process environment. Do not load a secret file. Run the smoke test and the
-whole suite normally:
+### Running it without Docker
 
 ```shell
-uv run --locked pytest -vv config/tests/test_postgresql.py
-uv run --locked pytest
+uv run --locked python manage.py migrate
+pnpm --dir frontend dev
+uv run --locked python manage.py runserver
 ```
 
-Do not add `--reuse-db`, `--create-db`, `--keepdb`, or any persistent test
-service. Django creates only the exact derived test database, applies the
-currently merged built-in migrations there, runs the tests, and destroys that
-database on ordinary completion. Do not run product migrations against the
-empty base database.
+Vite serves the interface on <http://localhost:5173/> and proxies `/api` to
+Django on port 8000, so the two still share an origin from the browser's
+point of view. To run the built interface the way the container does, build
+it first and use the same server the container uses:
 
-After the run, verify that the exact test database is absent and that the base
-database's `public` schema is still empty. Then stop and remove only the exact
-container name recorded during preflight; its transient cluster disappears
-with it. Never select cleanup targets by prefix, wildcard, glob, broad SQL
-predicate, or prune operation, and never remove a shared volume.
+```shell
+pnpm --dir frontend build
+uv run --locked python manage.py serve --port 8000
+```
 
-If a run is interrupted, first re-prove the container name, run label, image
-digest, loopback host, target, all derived names, and role flags. Only then may
-the one exact derived test database be removed. If any guard cannot be
-re-proven, issue no database command: remove only the one exact ephemeral
-container recorded for that run.
+### Browser journeys
 
-Persistent services, reused containers, public or LAN binds, external
-databases, shared/staging/production data, and any other image or package are
-outside this approval and require a newly groomed task and explicit approval.
+Five household journeys and two audits, driven in headless Chrome against
+the real API and the real build, on one origin. They need a build and a
+browser, so they are a local gate rather than a CI check:
 
-### T006 handoff
+```shell
+pnpm --dir frontend build
+python3 -m browser_journeys.run_journeys .
+```
 
-Task T006 adds the custom user model and its first product migration without
-weakening or rewriting this guard. Its local verifier must generate a unique
-`task_t006_<worker-token>` target, where the token is 8-16 lowercase ASCII
-letters or digits. It must use the exact derived base, role, and test names
-above, prove the same preflight facts, and let Django apply the new migration
-only inside the disposable test database. The base database remains an empty
-lifecycle anchor; committed CI service integration belongs to T017 and uses
-the `ci_...` grammar with the exact `postgres` alias.
+`browser_journeys/README.md` has the journey list and the isolation contract.
+
+### Isolated PostgreSQL tests
+
+A PostgreSQL development or test run fails closed around one explicitly
+named target. Every character must match one of these grammars exactly;
+whitespace, uppercase, other punctuation and missing tokens are rejected.
+
+| Lineage | Exact target grammar | Required host |
+| --- | --- | --- |
+| Local task | `task_tNNN_<worker-token>` - three digits, then 8-16 lowercase letters or digits | `127.0.0.1` |
+| CI job | `ci_<run-id>_<attempt>_<job-token>` | `postgres` |
+
+For a target `<target>`, nothing is chosen independently: the base database
+and the restricted role are both `chorum_murohc_<target>`, the disposable
+test database is `test_chorum_murohc_<target>`, and the password is a
+test-only secret injected through the environment, never written in a file or
+a command argument.
+
+Local runs use one fresh container from the approved immutable image
+`postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73`,
+bound to `127.0.0.1` on a Docker-selected port, with transient storage and no
+repository or secret mount. The approval is recorded in
+[issue #5](https://github.com/alexisdacquay/chorum-murohc/issues/5#issuecomment-5559116428).
+Before Django is given a credential, a preflight proves the target, the
+derived names, the owner, the four role flags
+(`NOSUPERUSER CREATEDB NOCREATEROLE NOREPLICATION`), the empty base schema
+and the absent test database, and refuses if any of them is wrong. Afterwards
+the test database must be gone and the base schema still empty; then remove
+that one recorded container by its exact name, never by prefix or prune.
+`.github/workflows/ci.yml` owns the same guard for CI, including how its
+credentials are derived and rotated inside the job.
+
+## What this deployment is not
+
+Said plainly, because the alternative is finding out later:
+
+- **One process.** The application is a threaded standard-library WSGI
+  server, sized for a family on one machine. The login abuse control counts
+  attempts per process, so a second worker would multiply the allowance
+  ([#128](https://github.com/alexisdacquay/chorum-murohc/issues/128)): run
+  one.
+- **No TLS of its own.** Certificates belong to a reverse proxy in front of
+  it. See `DJANGO_HTTPS` above.
+- **The Content-Security-Policy does not reach the interface document.**
+  `config/middleware.py` sends `default-src 'self'` on Django's own
+  responses; the built interface, served by `config/spa.py`, does not carry
+  it. Driving the real build under that policy in a browser blocks two things
+  the interface does today - the `data:` favicon Vite inlines, and an inline
+  `<style>` element that appears when a dialog opens - so switching it on
+  would silently drop styles. `_docs/audit-security.md` records it for S-01's
+  owner.
+- **No self-service password reset**
+  ([#129](https://github.com/alexisdacquay/chorum-murohc/issues/129)) and no
+  way to switch between households in one session
+  ([#130](https://github.com/alexisdacquay/chorum-murohc/issues/130)).
+- **One household.** The data model has households, but the product is built
+  and tested for one family on one machine.
+- **Not tamper-proof.** Household isolation and the append-only ledger are
+  enforced in the application, not by the database. Whoever holds the
+  database holds the points.
+
+## Documentation
+
+- [Contributor map](AGENTS.md) - layout, the two gates, and the house rules
+- [Project plan](_docs/plan.md) - current product scope and requirements
+- [Design](_docs/design.md) - selected architecture and implementation track
+- [Backlog](_docs/tasks.md) - self-contained implementation tasks
+- [Testing guidelines](_docs/testing-guidelines.md) - what to test and where
+- [Design system](_docs/design-system.md) - interface tokens and component rules
+- [Dependency approvals](_docs/dependency-approvals.md) - package-change register
+- [Approval authentication](_docs/approval-authentication.md) - parent PIN policy
+- [Interest policy](_docs/interest-policy.md) - the weekly rule and its arithmetic
+- [Interest schedule](_docs/interest-schedule.md) - the cron line and recovery
+- [Creature catalogue policy](_docs/creature-catalogue-policy.md) - the seven lines
+- [Retention policy](_docs/retention-policy.md) - deactivate, edit and delete rules
+- [Roadmap](_docs/roadmap.md) - ideas intentionally deferred beyond the current scope
+- [Browser journeys](browser_journeys/README.md) - the end-to-end harness
+- [Accessibility audit](_docs/audit-accessibility.md) - WCAG 2.2 AA findings
+- [Security audit](_docs/audit-security.md) - security findings and residual risks
+- [Plan verification](_docs/plan-verification.md) - requirement-by-requirement go or no-go

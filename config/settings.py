@@ -31,6 +31,19 @@ def _required(variable):
     raise ImproperlyConfigured(f'{variable} is required.')
 
 
+def _read_boolean(variable, default):
+    value = os.environ.get(variable)
+    if value is None:
+        return default
+    normalised = value.strip().casefold()
+    if normalised in {'1', 'true', 'yes', 'on'}:
+        return True
+    if normalised in {'0', 'false', 'no', 'off'}:
+        return False
+    # Always raises; there is no fourth outcome.
+    _invalid(variable)
+
+
 environment_value = os.environ.get('DJANGO_ENVIRONMENT')
 if environment_value is None:
     DJANGO_ENVIRONMENT = 'development'
@@ -41,30 +54,46 @@ else:
 
 is_production = DJANGO_ENVIRONMENT == 'production'
 
+# The key itself, or a file holding it. The variable wins when both are
+# given. The file is how the container does it: the entrypoint generates one
+# into the state volume on the first start, and reading it from settings -
+# rather than exporting it from the entrypoint - means every process in the
+# container has it, including `docker compose exec ... manage.py`.
 secret_key_value = os.environ.get('DJANGO_SECRET_KEY')
-if secret_key_value is None:
-    if is_production:
-        _required('DJANGO_SECRET_KEY')
-    SECRET_KEY = 'django-insecure-local-development-only'
-elif not secret_key_value.strip():
-    _invalid('DJANGO_SECRET_KEY')
-else:
+secret_key_file_value = os.environ.get('DJANGO_SECRET_KEY_FILE')
+if secret_key_value is not None:
+    if not secret_key_value.strip():
+        _invalid('DJANGO_SECRET_KEY')
     SECRET_KEY = secret_key_value
-
-debug_value = os.environ.get('DJANGO_DEBUG')
-if debug_value is None:
-    DEBUG = not is_production
+elif secret_key_file_value is not None:
+    try:
+        secret_key_file_contents = Path(secret_key_file_value).read_text()
+    except OSError:
+        _invalid('DJANGO_SECRET_KEY_FILE')
+    SECRET_KEY = secret_key_file_contents.strip()
+    if not SECRET_KEY:
+        _invalid('DJANGO_SECRET_KEY_FILE')
+elif is_production:
+    _required('DJANGO_SECRET_KEY')
 else:
-    normalised_debug = debug_value.strip().casefold()
-    if normalised_debug in {'1', 'true', 'yes', 'on'}:
-        DEBUG = True
-    elif normalised_debug in {'0', 'false', 'no', 'off'}:
-        DEBUG = False
-    else:
-        _invalid('DJANGO_DEBUG')
+    SECRET_KEY = 'django-insecure-local-development-only'
+
+DEBUG = _read_boolean('DJANGO_DEBUG', not is_production)
 
 if is_production and DEBUG:
     _invalid('DJANGO_DEBUG')
+
+# Whether browsers reach this deployment over HTTPS. One switch for every
+# transport-dependent setting below: Secure cookies, the redirect to HTTPS,
+# and HSTS. It follows the environment unless it is set, so a production
+# deployment is hardened by default.
+#
+# A household running the container on its own network over plain HTTP has to
+# set DJANGO_HTTPS=false. A Secure cookie is never sent over HTTP, so leaving
+# this true there would mean nobody could sign in. That choice is a real
+# downgrade, not a formality: `manage.py check --deploy` then reports the
+# four transport warnings it earns, and `README.md` says so.
+USE_HTTPS = _read_boolean('DJANGO_HTTPS', is_production)
 
 allowed_hosts_value = os.environ.get('DJANGO_ALLOWED_HOSTS')
 if allowed_hosts_value is None:
@@ -297,18 +326,32 @@ CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
 
-# Development serves plain HTTP, so both cookies are Secure in production
-# only; marking them Secure in development would stop them being sent at all.
-SESSION_COOKIE_SECURE = is_production
-CSRF_COOKIE_SECURE = is_production
+# A Secure cookie is only ever sent over HTTPS, so both cookies follow the
+# transport rather than the environment: marking them Secure on a deployment
+# reached over plain HTTP would stop them being sent at all.
+SESSION_COOKIE_SECURE = USE_HTTPS
+CSRF_COOKIE_SECURE = USE_HTTPS
 
-# Transport hardening (S-02). Development serves plain HTTP over the Django
-# dev server, so forcing a redirect or advertising HSTS there would break it;
-# both are production only, exactly like the cookie Secure flags above.
-# A year, and including subdomains, is the standard HSTS starting point.
-SECURE_SSL_REDIRECT = is_production
-SECURE_HSTS_SECONDS = 60 * 60 * 24 * 365 if is_production else 0
-SECURE_HSTS_INCLUDE_SUBDOMAINS = is_production
+
+# Transport hardening (S-02), all of it following `DJANGO_HTTPS` rather than
+# the environment. Development serves plain HTTP, and so does a household
+# container on its own network, and every rule here is actively harmful
+# there: the redirect would loop and HSTS would tell the browser to refuse
+# the plain-HTTP address it was just served on. A year, and including
+# subdomains, is the standard HSTS starting point.
+SECURE_SSL_REDIRECT = USE_HTTPS
+SECURE_HSTS_SECONDS = 60 * 60 * 24 * 365 if USE_HTTPS else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = USE_HTTPS
+
+# HTTPS is terminated by whatever proxy the operator puts in front, so Django
+# has to be told which request reached it over TLS or the redirect above
+# never settles. This trusts `X-Forwarded-Proto`, which is only safe because
+# it is set exclusively when the operator says a proxy is there; nothing
+# outside that proxy may reach the container.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if USE_HTTPS else None
+
+# Nothing in this product is ever framed, by itself or by anyone else.
+X_FRAME_OPTIONS = 'DENY'
 
 # `check --deploy` also warns W021 unless `SECURE_HSTS_PRELOAD` is True, but
 # that setting exists to signal actual submission to the browser vendors'
@@ -415,6 +458,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# `collectstatic` writes here at image build time, and `config.spa` serves
+# this directory at STATIC_URL. Only the admin's own files land here; the
+# household interface is the Vite build below.
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# The built interface, served from the same origin as the API by
+# `config.spa`. `pnpm --dir frontend build` writes it.
+FRONTEND_DIST = BASE_DIR / 'frontend' / 'dist'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

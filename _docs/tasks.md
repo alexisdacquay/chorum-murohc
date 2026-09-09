@@ -14,6 +14,21 @@ Tasks are intended for one focused engineering session except the explicitly
 approved one-task-per-creature-lineage work. Those lineage tasks remain one
 issue each but may use resumable checkpoint commits under one owner.
 
+Three policy documents named in the briefs below were never written. The
+product owner approved each of those decisions in the issue's own brief
+instead, so the file names are dangling references and the decisions are
+real. Read them as:
+
+- `_docs/reward-policy.md` - the reward policy approved in
+  [issue #55](https://github.com/alexisdacquay/chorum-murohc/issues/55): a
+  parent-defined reward catalogue, not the plan's two fixed conversions.
+- `_docs/levelling-policy.md` - the levelling policy approved in
+  [issue #61](https://github.com/alexisdacquay/chorum-murohc/issues/61): ten
+  levels earned from lifetime points, not levels bought with points.
+- `_docs/onboarding-policy.md` - the creature-selection timing recorded in
+  `_docs/plan.md` under "Selection timing": the child chooses at first
+  sign-in, and the choice is kept.
+
 Implementation work follows two additional rules:
 
 - Read the affected flow before changing it, reuse existing or native

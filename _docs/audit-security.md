@@ -68,7 +68,9 @@ Confirmed by reading the source:
 ## Findings
 
 Zero open findings. Four fixed (S-01 to S-04); one (S-05) evaluated and
-accepted rather than built, tracked as a residual risk below.
+accepted rather than built, tracked as a residual risk below. S-01's fix
+turned out to cover less than it looks: see the addendum at the end, written
+once there was a deployment serving the interface document.
 
 | Id | Severity | Boundary | What happened | Expected | Regression test | Status |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -101,3 +103,43 @@ rechecked independently as T095 requires.
 - No review of the deployment host, TLS termination or backups; there is no
   deployment configuration in this repository to review.
 - No cryptographic review of Django's own hashers or session machinery.
+
+## Addendum, 2026-09-09: what the deployment changed (issue #158)
+
+The findings above, and the fixes recorded beside them, were written when
+there was no deployment configuration in this repository. There is one now -
+`Dockerfile`, `compose.yaml` and `docker/entrypoint.sh` - and it changes
+three of the statements above.
+
+- **S-02's fix now follows the transport, not the environment.**
+  `DJANGO_HTTPS` turns `SECURE_SSL_REDIRECT`, `SECURE_HSTS_SECONDS` (a year),
+  `SECURE_HSTS_INCLUDE_SUBDOMAINS` and both Secure cookies on together, and
+  defaults to on in production, so #162's fix holds as it stood. With it on,
+  `manage.py check --deploy` reports nothing but the deliberately silenced
+  W021. Regression tests:
+  `test_the_https_switch_owns_every_transport_rule_in_production` and
+  `test_the_production_default_satisfies_the_deployment_check` in
+  `config/tests/test_settings.py`.
+- **S-01 is not closed on the interface document.** #162 sends
+  `default-src 'self'` from `config/middleware.py`, which covers Django's
+  responses - the API and the admin. The HTML document is served by
+  `config/spa.py`, and it does not send the header. Driving the real build in
+  a browser with the header added showed two violations: `img-src <- data`
+  on first load (the `data:` favicon Vite inlines) and `style-src-elem <-
+  inline` when a dialog opens (an injected `<style>` element). Sending the
+  policy on the document would drop those silently rather than fail loudly,
+  so the header was left off and the evidence recorded here. Closing S-01
+  properly means allowing `data:` images and inline styles, or removing both
+  from the build; that is a decision for S-01's owner.
+- **The shipped compose file deliberately turns it off**, because a family
+  reaches the machine at `http://192.168.1.20:8000` and a Secure cookie is
+  never sent over plain HTTP. In that mode the same check reports W004,
+  W008, W012 and W016. That is the trade a home deployment makes, it is
+  stated in `README.md`, and one variable reverses it.
+- **"No review of the deployment host, TLS termination or backups" still
+  holds**, and now has something to point at. What the configuration does
+  claim: the application container runs as a non-root user, the database
+  publishes no port to the host, the application is published on `127.0.0.1`
+  until an operator says otherwise, the session signing key is generated into
+  a volume and never printed, and both images are pinned by digest. None of
+  that has been independently audited.
