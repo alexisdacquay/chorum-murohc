@@ -5,8 +5,7 @@
 > issue [#160](https://github.com/alexisdacquay/chorum-murohc/issues/160).
 >
 > **Date:** 2026-09-09, re-run after the S-01 to S-05 fix pass, against
-> `262e43d` (the parent overview and activity screens re-run) plus the fix
-> itself.
+> `b584bfb` (the accessibility audit fix) plus the fix itself, `147c647`.
 > **Method:** live browser probes
 > (`python3 -m browser_journeys.run_journeys . audit-security`),
 > `manage.py check --deploy` against a production configuration, and a source
