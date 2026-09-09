@@ -75,24 +75,39 @@ Household chore management web app with a points economy, gamification, and crea
 
 - Each child picks a creature line at signup
 
+### Selection timing
+
+- A child picks their line at first sign-in, after their account exists, so
+  account creation never waits on the chooser
+- The choice is kept: a creature cannot be swapped for another one later
+
 ### Creature Lines (7)
 
-1. Warhammer 40k Soldier
-2. Warhammer Tyranid
-3. Golem
-4. Dragon
-5. Pikachu
-6. Lego Star Wars Stormtrooper
-7. Playmobil Pirate
+All seven are original renderings of public-domain mythological archetypes.
+The project uses no third-party intellectual property; the lines this plan
+originally named (Warhammer 40k Soldier, Warhammer Tyranid, Pikachu, Lego
+Star Wars Stormtrooper, Playmobil Pirate) are dropped, and `_docs/creature-catalogue-policy.md`
+records that decision.
+
+1. Dragon
+2. Golem
+3. Griffin
+4. Phoenix
+5. Kraken
+6. Treant
+7. Sphinx
 
 ### Evolution Visual
 
-- ~35 AI-generated images per creature line (~245 total)
-- Gradual, smooth progression between levels
-- Early levels: small, dull colours, minimal detail
-- Late levels: massive, vivid colours, elaborate armour/features
-- Each step shows a clear but small visual change from the previous
-- Users can browse all their creature's previous forms to compare
+- 4 forms per creature line (28 total), one per evolution stage
+- Original flat SVG drawn for this repository and committed to it; no
+  downloaded asset and no external image host
+- Forms are reached at levels 1, 4, 7 and 10
+- Early forms: small, muted, minimal detail
+- Late forms: large, vivid, elaborate wings, crests and armour
+- Each step shows a clear visual change from the previous
+- Children can browse every form of their line; the ones still to come show
+  as silhouettes with the level that reveals them
 
 ## Admin Features
 

@@ -8,6 +8,7 @@ from chorum_murohc.api.chores import (
     ChoreListView,
     ChoreReactivateView,
 )
+from chorum_murohc.api.creatures import CreatureLineListView, CreatureView
 from chorum_murohc.api.members import (
     MemberDeactivateView,
     MemberDetailView,
@@ -93,6 +94,12 @@ urlpatterns = [
         'redemptions/<int:pk>/cancel/',
         RedemptionCancelView.as_view(),
         name='redemption-cancel',
+    ),
+    path('creature/', CreatureView.as_view(), name='creature'),
+    path(
+        'creature/lines/',
+        CreatureLineListView.as_view(),
+        name='creature-line-list',
     ),
     path('progression/', ProgressionView.as_view(), name='progression'),
     path(
