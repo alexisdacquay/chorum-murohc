@@ -6,7 +6,8 @@ username the run creates; every password and every PIN is freshly generated
 from `secrets` for that run alone. Two runs therefore cannot share a
 database, a household, a user or a credential, whether they run one after
 the other or at the same time, and neither can two journeys inside one run:
-each journey gets its own household.
+every household belongs to exactly one journey, and no account is ever a
+member of another journey's household.
 
 The data is created through the product's own models and services, not
 through fixtures of a private shape, so a journey drives the same rows the
@@ -27,8 +28,10 @@ from chorum_murohc.ledger.models import LedgerEntry
 from chorum_murohc.rewards.models import Reward
 from chorum_murohc.submissions.models import Submission
 
-# One household per journey, so a journey cannot see or disturb another
-# journey's rows even though they share one throwaway database.
+# Every household belongs to one journey, so a journey cannot see or disturb
+# another journey's rows even though they share one throwaway database. One
+# journey may own two households - `audit-accessibility` does, because the
+# household picker and switcher only exist for an account that has two.
 JOURNEY_NAMES = (
     'smoke',
     'child-submission',
@@ -291,15 +294,28 @@ def _seed_creature(token):
 
 
 def _seed_audit_accessibility(token):
-    """One household with something on every screen the audit has to visit.
+    """Everything the audit has to visit, including the two-household screens.
 
     An empty screen hides most of what an accessibility audit is looking for,
     so this household has a chore, a reward, points, a level, a creature and
     a submission waiting for a decision.
+
+    The parent also holds a membership of a second household of this same
+    journey, because two screens only exist for a caller who has more than
+    one: the post-sign-in picker, and the switcher in the banner (issue
+    #130). Both are unreachable for a single-membership account, so without
+    the second household the audit would silently skip them. The child stays
+    single-membership, so the child half of the walk is unchanged.
     """
     journey = 'audit-accessibility'
     household = _household(token, journey)
-    _, parent = _parent_with_pin(household, token, journey, 'parent')
+    parent_user, parent = _parent_with_pin(household, token, journey, 'parent')
+    second_household = _household(token, f'{journey} second')
+    Membership.objects.create(
+        household=second_household,
+        user=parent_user,
+        role=Membership.Role.PARENT,
+    )
     child_user, child = _member(
         household,
         token,
@@ -324,6 +340,7 @@ def _seed_audit_accessibility(token):
     _pending_submission(household, child_user, chore, 'audit-pending')
     return {
         'household': household.name,
+        'secondHousehold': second_household.name,
         'parent': parent,
         'child': child,
         'startingBalance': lifetime_points,

@@ -41,10 +41,18 @@ browser by the journeys in `browser_journeys/`.
   level that reveals them.
 - **Oversight.** Parents see every child's balance and level on one overview
   screen, and the household's activity history on another.
+- **Passwords.** A parent changes their own password on the Change password
+  screen, proving it with their current one, and stays signed in. A parent
+  resets a different member's password from Household, proving it with their
+  own PIN or their own password; resetting a parent's password also clears
+  that parent's PIN and lockout.
+- **More than one household.** An account that belongs to two households
+  picks which one to act in when it signs in, and switches from the banner.
+  The role always comes from the chosen household alone.
 
 Parent screens: Overview, Approvals, Chore pool, Reward requests, Household,
-Activity, Approval PIN. Child screens: Chores, Points, Rewards, Levels,
-Creature.
+Activity, Approval PIN, Change password. Child screens: Chores, Points,
+Rewards, Levels, Creature.
 
 ## Run it
 
@@ -148,8 +156,10 @@ git pull && docker compose up -d --build   # update to a newer version
 docker compose exec app python manage.py changepassword alexis
 ```
 
-There is no self-service password reset: a forgotten password is reset with
-`changepassword` by whoever runs the machine.
+Passwords are self-service inside the app: a parent changes their own on the
+Change password screen, and resets another member's from Household.
+`changepassword` above is the way back in when every parent's password is
+forgotten at once, which is the one case the app cannot help with.
 
 ## Backup and restore
 
@@ -355,10 +365,12 @@ Said plainly, because the alternative is finding out later:
   `<style>` element that appears when a dialog opens - so switching it on
   would silently drop styles. `_docs/audit-security.md` records it for S-01's
   owner.
-- **No self-service password reset**
-  ([#129](https://github.com/alexisdacquay/chorum-murohc/issues/129)) and no
-  way to switch between households in one session
-  ([#130](https://github.com/alexisdacquay/chorum-murohc/issues/130)).
+- **No password recovery without a parent.** A parent resets any other
+  member's password in the app
+  ([#129](https://github.com/alexisdacquay/chorum-murohc/issues/129)), but
+  there is no email, no reset link and no self-service route for a child. If
+  every parent's password is forgotten at once, `changepassword` on the host
+  is the only way back in.
 - **One household.** The data model has households, but the product is built
   and tested for one family on one machine.
 - **Not tamper-proof.** Household isolation and the append-only ledger are

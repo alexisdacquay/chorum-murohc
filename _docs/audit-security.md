@@ -49,6 +49,9 @@ Confirmed by reading the source:
   (`chorum_murohc.api.security_logging`; S-04, closed).
 - `manage.py check --deploy` against a production configuration reports no
   issues (one, `security.W021`, is deliberately silenced; see S-02 below).
+- The login throttle's counters are shared, not per process: they live in a
+  PostgreSQL-backed cache of their own, so a second worker cannot multiply
+  the allowance (#128, closed; see the residual-risk table below).
 - `uv.lock` and `pnpm-lock.yaml` are both scanned for known vulnerabilities on
   a schedule and on every pull request
   (`.github/workflows/dependency-audit.yml`); both currently report none
@@ -89,7 +92,7 @@ rechecked independently as T095 requires.
 | --- | --- | --- | --- |
 | Privileged database access is trusted; household isolation and audit immutability are application-layer only, with no row-level security, trigger or tamper evidence | [#123](https://github.com/alexisdacquay/chorum-murohc/issues/123) | Yes. Verified: isolation is enforced in `api/permissions.py` and every queryset; immutability is enforced in `LedgerEntry` and `AuditEvent` Python only. No trigger or RLS exists | Yes, for a single-household family app whose database has one operator who is also the product owner. It must not be described as tamper-proof anywhere |
 | No bounded login-abuse control | T027 | No longer true. Delivered: 10 failed attempts per minute and 100 per hour per client address, counting failures only | Closed |
-| The login throttle counts per process, so a multi-process deployment multiplies the allowance | [#128](https://github.com/alexisdacquay/chorum-murohc/issues/128) | Yes. `CACHES['login_throttle']` is `LocMemCache` | Yes while the deployment is one process. It becomes a real hole the day a second worker starts, so it blocks any multi-process deployment |
+| The login throttle counts per process, so a multi-process deployment multiplies the allowance | [#128](https://github.com/alexisdacquay/chorum-murohc/issues/128) | No longer true. Delivered: `CACHES['login_throttle']` is Django's `DatabaseCache` on the PostgreSQL dependency the product already has, so every process reads and writes one set of counters. The table is created by the `chorum_murohc.0001_login_throttle_cache_table` migration, not by a separate `createcachetable` step an operator could forget | Closed. Proved on the running deployment: ten failed logins from one address were refused with the fixed generic detail, and a second process in the same container read those same ten attempts back out of the `login_throttle_cache` table |
 | Parent PIN retry, lockout and recovery thresholds undefined | T029 | No longer true. `_docs/approval-authentication.md` is approved and implemented: 4-10 digits, hashed, five failures, fifteen-minute per-parent lockout, recovery by re-setting with the account password | Closed. The four-digit floor stays weak offline; the lockout, not the hash, is the defence, and that is stated in the policy |
 | Session cookies are the only authentication factor; no second factor and no single sign-on | Unowned | Yes | Yes for this product. Two parents and their children on household devices; a second factor would cost more than it buys. Needs its own task if the product ever leaves the house |
 | No independent human security review; the product owner waived it | [#18](https://github.com/alexisdacquay/chorum-murohc/issues/18#issuecomment-5584623381) | Yes. This audit is the same campaign's own work, not an independent third party | Unchanged. Worth restating rather than quietly retiring |

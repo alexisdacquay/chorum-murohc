@@ -483,7 +483,21 @@ window.CHORUM_JOURNEYS['audit-accessibility'] = async function (t) {
 
   await t.signOut()
   await t.load('/')
-  await t.signIn(t.dataset.parent, 'Overview')
+
+  // This parent belongs to two households, so signing in lands on the
+  // picker rather than a screen (issue #130). It is the first thing such an
+  // account ever sees, and it is only reachable this way.
+  await t.signIn(t.dataset.parent, 'Choose a household')
+  auditScreen('household picker')
+  await t.click(t.dataset.household)
+  // "Overview" alone is in the navigation from the first paint, so waiting
+  // for it would measure a screen whose data has not arrived: the child's
+  // own name is what only the settled screen shows.
+  await t.waitForText(
+    t.dataset.child.username,
+    'chose a household and landed on a loaded "Overview"',
+  )
+
   var parentScreens = [
     ['Overview', 'Overview'],
     ['Approvals', 'Approvals'],
@@ -492,12 +506,22 @@ window.CHORUM_JOURNEYS['audit-accessibility'] = async function (t) {
     ['Household', 'Household'],
     ['Activity', 'Activity'],
     ['Approval PIN', 'Approval PIN'],
+    ['Change password', 'Change password'],
   ]
   for (var parentIndex = 0; parentIndex < parentScreens.length; parentIndex += 1) {
     var parentRoute = parentScreens[parentIndex]
     await t.goTo(parentRoute[0], parentRoute[1])
     auditScreen('parent ' + parentRoute[0].toLowerCase())
   }
+
+  // The switcher lives in the banner beside "Sign out", so every screen
+  // above measured it. Say so, and prove it was really there rather than
+  // quietly absent for the whole walk.
+  var switcher = await t.field('Switch household')
+  t.expect(
+    switcher.options.length === 2,
+    'the banner offers both households to switch between',
+  )
 
   t.record('audited every built screen; ' + t.findings.length + ' finding(s)')
 }

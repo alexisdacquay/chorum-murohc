@@ -53,10 +53,12 @@ are excluded from the default run. Their findings live in
 
 Every run mints a run token. The token names the throwaway SQLite file, and
 it is the suffix of every household and every username the run creates; every
-password and PIN is generated with `secrets` for that run alone. Each journey
-inside a run gets its own household, so no journey can see another's rows,
-and each journey gets its own browser profile, so no journey inherits
-another's cookies.
+password and PIN is generated with `secrets` for that run alone. Every
+household inside a run belongs to exactly one journey, so no journey can see
+another's rows, and each journey gets its own browser profile, so no journey
+inherits another's cookies. One journey may own two households:
+`audit-accessibility` does, because the household picker and the switcher
+only exist for an account that belongs to more than one.
 
 `test_seed.py` proves that in the backend gate, where the browser is not
 available: two runs share no database, household, user or credential, and no

@@ -4,17 +4,25 @@
 > finding is a separate entry for someone to pick up.
 >
 > **Date:** 2026-09-09, re-run after issue #159 fixed the four findings this
-> file previously recorded. **Standard:** WCAG 2.2 level AA.
+> file previously recorded, and again over the two screens issues #129 and
+> #130 added. **Standard:** WCAG 2.2 level AA.
 > **Method:** `python3 -m browser_journeys.run_journeys . audit-accessibility`,
 > headless Chrome 149, plus one keyboard pass and a source read.
 
 ## What was audited
 
 Every screen the product currently builds, in a real browser, signed in as a
-real child and a real parent: sign-in, child chores, points, rewards, levels
-and creature, and parent overview, approvals, chore pool, reward requests,
-household, activity and approval PIN. All thirteen are real screens; none is
-a placeholder any more.
+real child and a real parent: sign-in, the household picker, child chores,
+points, rewards, levels and creature, and parent overview, approvals, chore
+pool, reward requests, household, activity, approval PIN and change password.
+All fifteen are real screens; none is a placeholder any more.
+
+Two of those need an account that belongs to more than one household, or
+they do not exist at all: the picker shown right after signing in, and the
+switcher in the banner. The audit's own parent therefore holds two
+memberships, so the walk goes through the picker and every parent screen is
+measured with the switcher on it. Without that the audit would have walked
+past both, reporting nothing and looking clean.
 
 Per screen the audit ran: text alternatives (1.1.1), accessible names for
 every visible control (4.1.2), heading structure and the main landmark
@@ -32,9 +40,11 @@ Escape, and checking where focus lands.
 
 ## Findings
 
-None. `audited every built screen; 0 finding(s)` across all thirteen
+None. `audited every built screen; 0 finding(s)` across all fifteen
 screens, and the keyboard pass reports focus back on the trigger after
-Escape.
+Escape. The two newest screens are clean on every check the audit runs:
+3 controls and 6 text elements measured on the household picker, 15 and 18
+on change password.
 
 ## Fixed by issue #159
 
@@ -64,4 +74,7 @@ Stated so the clean result is not read as more than it is.
 - No check of error-message suggestions (3.3.3), language of parts (3.1.2),
   or timing (2.2.x); the product has no timed interaction.
 - The audit reads the DOM after the page settles, so a transient state during
-  loading is not measured.
+  loading is not measured. Settling is waited for by what a screen says, not
+  by a delay: the walk into the parent screens waits for the child's own
+  name on the overview, because the word "Overview" is in the navigation
+  from the first paint and waiting for that measured a half-drawn screen.
